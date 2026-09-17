@@ -19,7 +19,7 @@ final class _Lot1SchemaUser implements QueryExecutorUser {
 }
 
 void main() {
-  test('migre le schéma 1 vers 2 en créant customers', () async {
+  test('migre une base v1 jusqu’à la version courante en créant customers', () async {
     final directory = await Directory.systemTemp.createTemp(
       'accord_memo_migrate_',
     );
@@ -54,6 +54,6 @@ void main() {
     final migratedVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(migratedVersion.read<int>('user_version'), 2);
+    expect(migratedVersion.read<int>('user_version'), 3);
   });
 }

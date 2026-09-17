@@ -3,15 +3,16 @@ import 'package:drift/native.dart';
 
 import 'sqlite_database_path.dart';
 import 'tables/customers_table.dart';
+import 'tables/pianos_table.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Customers])
+@DriftDatabase(tables: [Customers, Pianos])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration {
@@ -19,11 +20,16 @@ class AppDatabase extends _$AppDatabase {
       onCreate: (Migrator m) async {
         await m.createAll();
         await _createCustomerIndexes();
+        await _createPianoIndexes();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
           await m.createTable(customers);
           await _createCustomerIndexes();
+        }
+        if (from < 3) {
+          await m.createTable(pianos);
+          await _createPianoIndexes();
         }
       },
       beforeOpen: (OpeningDetails details) async {
@@ -40,6 +46,17 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_customers_last_name '
       'ON customers (last_name)',
+    );
+  }
+
+  Future<void> _createPianoIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_pianos_customer_id '
+      'ON pianos (customer_id)',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_pianos_archived_at '
+      'ON pianos (archived_at)',
     );
   }
 }

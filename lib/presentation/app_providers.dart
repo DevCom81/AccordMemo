@@ -1,12 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/customer/customer_service.dart';
+import '../application/piano/piano_service.dart';
 import '../application/ports/id_generator.dart';
 import '../domain/clock.dart';
 import '../domain/customer/customer_repository.dart';
+import '../domain/piano/piano_repository.dart';
 import '../infrastructure/ids/uuid_id_generator.dart';
 import '../infrastructure/persistence/app_database.dart';
 import '../infrastructure/persistence/drift_customer_repository.dart';
+import '../infrastructure/persistence/drift_piano_repository.dart';
 import '../infrastructure/time/system_clock.dart';
 
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
@@ -34,5 +37,18 @@ final customerServiceProvider = Provider<CustomerService>((ref) {
     clock: ref.watch(clockProvider),
     idGenerator: ref.watch(idGeneratorProvider),
     repository: ref.watch(customerRepositoryProvider),
+  );
+});
+
+final pianoRepositoryProvider = Provider<PianoRepository>((ref) {
+  return DriftPianoRepository(ref.watch(appDatabaseProvider));
+});
+
+final pianoServiceProvider = Provider<PianoService>((ref) {
+  return PianoService(
+    clock: ref.watch(clockProvider),
+    idGenerator: ref.watch(idGeneratorProvider),
+    pianos: ref.watch(pianoRepositoryProvider),
+    customers: ref.watch(customerRepositoryProvider),
   );
 });
