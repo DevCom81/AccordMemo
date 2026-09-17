@@ -268,6 +268,30 @@ final class Piano {
     );
   }
 
+  /// Désactive les relances sans modifier l'archivage.
+  /// Autorisé sur un piano archivé (effet de bord d'un archivage Client).
+  Piano disableReminders(DateTime now) {
+    if (!remindersEnabled) {
+      return this;
+    }
+
+    return Piano._(
+      id: id,
+      customerId: customerId,
+      brand: brand,
+      model: model,
+      serialNumber: serialNumber,
+      type: type,
+      location: location,
+      notes: notes,
+      reminderIntervalMonths: reminderIntervalMonths,
+      remindersEnabled: false,
+      archivedAt: archivedAt,
+      createdAt: createdAt,
+      updatedAt: now.toUtc(),
+    );
+  }
+
   Piano restore(DateTime now) {
     if (!isArchived) {
       throw const PianoNotArchived();

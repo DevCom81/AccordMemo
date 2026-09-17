@@ -65,9 +65,16 @@ void main() {
         .get();
     expect(migratedTunings, isNotEmpty);
 
+    final migratedReminders = await database
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reminders'",
+        )
+        .get();
+    expect(migratedReminders, isNotEmpty);
+
     final migratedVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(migratedVersion.read<int>('user_version'), 4);
+    expect(migratedVersion.read<int>('user_version'), 5);
   });
 }

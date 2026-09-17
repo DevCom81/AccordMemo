@@ -64,4 +64,54 @@ void main() {
       throwsA(isA<CalendarDateInvalid>()),
     );
   });
+
+  test('addMonths conserve le jour quand il existe', () {
+    expect(
+      CalendarDate(2026, 1, 15).addMonths(1),
+      CalendarDate(2026, 2, 15),
+    );
+  });
+
+  test('addMonths ramène le 31 janvier au dernier jour de février', () {
+    expect(
+      CalendarDate(2026, 1, 31).addMonths(1),
+      CalendarDate(2026, 2, 28),
+    );
+    expect(
+      CalendarDate(2028, 1, 31).addMonths(1),
+      CalendarDate(2028, 2, 29),
+    );
+  });
+
+  test('addMonths ramène le 31 mars au 30 avril', () {
+    expect(
+      CalendarDate(2026, 3, 31).addMonths(1),
+      CalendarDate(2026, 4, 30),
+    );
+  });
+
+  test('addMonths depuis le 29 février + 12 mois', () {
+    expect(
+      CalendarDate(2028, 2, 29).addMonths(12),
+      CalendarDate(2029, 2, 28),
+    );
+  });
+
+  test('addMonths traverse une année et accepte +60', () {
+    expect(
+      CalendarDate(2026, 12, 15).addMonths(1),
+      CalendarDate(2027, 1, 15),
+    );
+    expect(
+      CalendarDate(2026, 1, 15).addMonths(60),
+      CalendarDate(2031, 1, 15),
+    );
+  });
+
+  test('addMonths refuse un nombre de mois inférieur à 1', () {
+    expect(
+      () => CalendarDate(2026, 1, 15).addMonths(0),
+      throwsA(isA<CalendarDateInvalid>()),
+    );
+  });
 }

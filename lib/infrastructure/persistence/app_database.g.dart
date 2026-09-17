@@ -1904,12 +1904,703 @@ class TuningsCompanion extends UpdateCompanion<TuningRecord> {
   }
 }
 
+class $RemindersTable extends Reminders
+    with TableInfo<$RemindersTable, ReminderRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RemindersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pianoIdMeta = const VerificationMeta(
+    'pianoId',
+  );
+  @override
+  late final GeneratedColumn<String> pianoId = GeneratedColumn<String>(
+    'piano_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES pianos (id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _originTuningIdMeta = const VerificationMeta(
+    'originTuningId',
+  );
+  @override
+  late final GeneratedColumn<String> originTuningId = GeneratedColumn<String>(
+    'origin_tuning_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES tunings (id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _dueDateMeta = const VerificationMeta(
+    'dueDate',
+  );
+  @override
+  late final GeneratedColumn<String> dueDate = GeneratedColumn<String>(
+    'due_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
+  @override
+  late final GeneratedColumn<String> status = GeneratedColumn<String>(
+    'status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _manuallyRescheduledMeta =
+      const VerificationMeta('manuallyRescheduled');
+  @override
+  late final GeneratedColumn<bool> manuallyRescheduled = GeneratedColumn<bool>(
+    'manually_rescheduled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("manually_rescheduled" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _cancellationReasonMeta =
+      const VerificationMeta('cancellationReason');
+  @override
+  late final GeneratedColumn<String> cancellationReason =
+      GeneratedColumn<String>(
+        'cancellation_reason',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _sentAtMeta = const VerificationMeta('sentAt');
+  @override
+  late final GeneratedColumn<DateTime> sentAt = GeneratedColumn<DateTime>(
+    'sent_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _cancelledAtMeta = const VerificationMeta(
+    'cancelledAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> cancelledAt = GeneratedColumn<DateTime>(
+    'cancelled_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    pianoId,
+    originTuningId,
+    dueDate,
+    status,
+    manuallyRescheduled,
+    cancellationReason,
+    sentAt,
+    cancelledAt,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'reminders';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ReminderRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('piano_id')) {
+      context.handle(
+        _pianoIdMeta,
+        pianoId.isAcceptableOrUnknown(data['piano_id']!, _pianoIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pianoIdMeta);
+    }
+    if (data.containsKey('origin_tuning_id')) {
+      context.handle(
+        _originTuningIdMeta,
+        originTuningId.isAcceptableOrUnknown(
+          data['origin_tuning_id']!,
+          _originTuningIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_originTuningIdMeta);
+    }
+    if (data.containsKey('due_date')) {
+      context.handle(
+        _dueDateMeta,
+        dueDate.isAcceptableOrUnknown(data['due_date']!, _dueDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dueDateMeta);
+    }
+    if (data.containsKey('status')) {
+      context.handle(
+        _statusMeta,
+        status.isAcceptableOrUnknown(data['status']!, _statusMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statusMeta);
+    }
+    if (data.containsKey('manually_rescheduled')) {
+      context.handle(
+        _manuallyRescheduledMeta,
+        manuallyRescheduled.isAcceptableOrUnknown(
+          data['manually_rescheduled']!,
+          _manuallyRescheduledMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_manuallyRescheduledMeta);
+    }
+    if (data.containsKey('cancellation_reason')) {
+      context.handle(
+        _cancellationReasonMeta,
+        cancellationReason.isAcceptableOrUnknown(
+          data['cancellation_reason']!,
+          _cancellationReasonMeta,
+        ),
+      );
+    }
+    if (data.containsKey('sent_at')) {
+      context.handle(
+        _sentAtMeta,
+        sentAt.isAcceptableOrUnknown(data['sent_at']!, _sentAtMeta),
+      );
+    }
+    if (data.containsKey('cancelled_at')) {
+      context.handle(
+        _cancelledAtMeta,
+        cancelledAt.isAcceptableOrUnknown(
+          data['cancelled_at']!,
+          _cancelledAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ReminderRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ReminderRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      pianoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}piano_id'],
+      )!,
+      originTuningId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}origin_tuning_id'],
+      )!,
+      dueDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}due_date'],
+      )!,
+      status: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}status'],
+      )!,
+      manuallyRescheduled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}manually_rescheduled'],
+      )!,
+      cancellationReason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cancellation_reason'],
+      ),
+      sentAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}sent_at'],
+      ),
+      cancelledAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}cancelled_at'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RemindersTable createAlias(String alias) {
+    return $RemindersTable(attachedDatabase, alias);
+  }
+}
+
+class ReminderRecord extends DataClass implements Insertable<ReminderRecord> {
+  final String id;
+  final String pianoId;
+  final String originTuningId;
+  final String dueDate;
+  final String status;
+  final bool manuallyRescheduled;
+  final String? cancellationReason;
+  final DateTime? sentAt;
+  final DateTime? cancelledAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const ReminderRecord({
+    required this.id,
+    required this.pianoId,
+    required this.originTuningId,
+    required this.dueDate,
+    required this.status,
+    required this.manuallyRescheduled,
+    this.cancellationReason,
+    this.sentAt,
+    this.cancelledAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['piano_id'] = Variable<String>(pianoId);
+    map['origin_tuning_id'] = Variable<String>(originTuningId);
+    map['due_date'] = Variable<String>(dueDate);
+    map['status'] = Variable<String>(status);
+    map['manually_rescheduled'] = Variable<bool>(manuallyRescheduled);
+    if (!nullToAbsent || cancellationReason != null) {
+      map['cancellation_reason'] = Variable<String>(cancellationReason);
+    }
+    if (!nullToAbsent || sentAt != null) {
+      map['sent_at'] = Variable<DateTime>(sentAt);
+    }
+    if (!nullToAbsent || cancelledAt != null) {
+      map['cancelled_at'] = Variable<DateTime>(cancelledAt);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  RemindersCompanion toCompanion(bool nullToAbsent) {
+    return RemindersCompanion(
+      id: Value(id),
+      pianoId: Value(pianoId),
+      originTuningId: Value(originTuningId),
+      dueDate: Value(dueDate),
+      status: Value(status),
+      manuallyRescheduled: Value(manuallyRescheduled),
+      cancellationReason: cancellationReason == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cancellationReason),
+      sentAt: sentAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(sentAt),
+      cancelledAt: cancelledAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(cancelledAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory ReminderRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ReminderRecord(
+      id: serializer.fromJson<String>(json['id']),
+      pianoId: serializer.fromJson<String>(json['pianoId']),
+      originTuningId: serializer.fromJson<String>(json['originTuningId']),
+      dueDate: serializer.fromJson<String>(json['dueDate']),
+      status: serializer.fromJson<String>(json['status']),
+      manuallyRescheduled: serializer.fromJson<bool>(
+        json['manuallyRescheduled'],
+      ),
+      cancellationReason: serializer.fromJson<String?>(
+        json['cancellationReason'],
+      ),
+      sentAt: serializer.fromJson<DateTime?>(json['sentAt']),
+      cancelledAt: serializer.fromJson<DateTime?>(json['cancelledAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'pianoId': serializer.toJson<String>(pianoId),
+      'originTuningId': serializer.toJson<String>(originTuningId),
+      'dueDate': serializer.toJson<String>(dueDate),
+      'status': serializer.toJson<String>(status),
+      'manuallyRescheduled': serializer.toJson<bool>(manuallyRescheduled),
+      'cancellationReason': serializer.toJson<String?>(cancellationReason),
+      'sentAt': serializer.toJson<DateTime?>(sentAt),
+      'cancelledAt': serializer.toJson<DateTime?>(cancelledAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  ReminderRecord copyWith({
+    String? id,
+    String? pianoId,
+    String? originTuningId,
+    String? dueDate,
+    String? status,
+    bool? manuallyRescheduled,
+    Value<String?> cancellationReason = const Value.absent(),
+    Value<DateTime?> sentAt = const Value.absent(),
+    Value<DateTime?> cancelledAt = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => ReminderRecord(
+    id: id ?? this.id,
+    pianoId: pianoId ?? this.pianoId,
+    originTuningId: originTuningId ?? this.originTuningId,
+    dueDate: dueDate ?? this.dueDate,
+    status: status ?? this.status,
+    manuallyRescheduled: manuallyRescheduled ?? this.manuallyRescheduled,
+    cancellationReason: cancellationReason.present
+        ? cancellationReason.value
+        : this.cancellationReason,
+    sentAt: sentAt.present ? sentAt.value : this.sentAt,
+    cancelledAt: cancelledAt.present ? cancelledAt.value : this.cancelledAt,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  ReminderRecord copyWithCompanion(RemindersCompanion data) {
+    return ReminderRecord(
+      id: data.id.present ? data.id.value : this.id,
+      pianoId: data.pianoId.present ? data.pianoId.value : this.pianoId,
+      originTuningId: data.originTuningId.present
+          ? data.originTuningId.value
+          : this.originTuningId,
+      dueDate: data.dueDate.present ? data.dueDate.value : this.dueDate,
+      status: data.status.present ? data.status.value : this.status,
+      manuallyRescheduled: data.manuallyRescheduled.present
+          ? data.manuallyRescheduled.value
+          : this.manuallyRescheduled,
+      cancellationReason: data.cancellationReason.present
+          ? data.cancellationReason.value
+          : this.cancellationReason,
+      sentAt: data.sentAt.present ? data.sentAt.value : this.sentAt,
+      cancelledAt: data.cancelledAt.present
+          ? data.cancelledAt.value
+          : this.cancelledAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ReminderRecord(')
+          ..write('id: $id, ')
+          ..write('pianoId: $pianoId, ')
+          ..write('originTuningId: $originTuningId, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('status: $status, ')
+          ..write('manuallyRescheduled: $manuallyRescheduled, ')
+          ..write('cancellationReason: $cancellationReason, ')
+          ..write('sentAt: $sentAt, ')
+          ..write('cancelledAt: $cancelledAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    pianoId,
+    originTuningId,
+    dueDate,
+    status,
+    manuallyRescheduled,
+    cancellationReason,
+    sentAt,
+    cancelledAt,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ReminderRecord &&
+          other.id == this.id &&
+          other.pianoId == this.pianoId &&
+          other.originTuningId == this.originTuningId &&
+          other.dueDate == this.dueDate &&
+          other.status == this.status &&
+          other.manuallyRescheduled == this.manuallyRescheduled &&
+          other.cancellationReason == this.cancellationReason &&
+          other.sentAt == this.sentAt &&
+          other.cancelledAt == this.cancelledAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class RemindersCompanion extends UpdateCompanion<ReminderRecord> {
+  final Value<String> id;
+  final Value<String> pianoId;
+  final Value<String> originTuningId;
+  final Value<String> dueDate;
+  final Value<String> status;
+  final Value<bool> manuallyRescheduled;
+  final Value<String?> cancellationReason;
+  final Value<DateTime?> sentAt;
+  final Value<DateTime?> cancelledAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const RemindersCompanion({
+    this.id = const Value.absent(),
+    this.pianoId = const Value.absent(),
+    this.originTuningId = const Value.absent(),
+    this.dueDate = const Value.absent(),
+    this.status = const Value.absent(),
+    this.manuallyRescheduled = const Value.absent(),
+    this.cancellationReason = const Value.absent(),
+    this.sentAt = const Value.absent(),
+    this.cancelledAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RemindersCompanion.insert({
+    required String id,
+    required String pianoId,
+    required String originTuningId,
+    required String dueDate,
+    required String status,
+    required bool manuallyRescheduled,
+    this.cancellationReason = const Value.absent(),
+    this.sentAt = const Value.absent(),
+    this.cancelledAt = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       pianoId = Value(pianoId),
+       originTuningId = Value(originTuningId),
+       dueDate = Value(dueDate),
+       status = Value(status),
+       manuallyRescheduled = Value(manuallyRescheduled),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<ReminderRecord> custom({
+    Expression<String>? id,
+    Expression<String>? pianoId,
+    Expression<String>? originTuningId,
+    Expression<String>? dueDate,
+    Expression<String>? status,
+    Expression<bool>? manuallyRescheduled,
+    Expression<String>? cancellationReason,
+    Expression<DateTime>? sentAt,
+    Expression<DateTime>? cancelledAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (pianoId != null) 'piano_id': pianoId,
+      if (originTuningId != null) 'origin_tuning_id': originTuningId,
+      if (dueDate != null) 'due_date': dueDate,
+      if (status != null) 'status': status,
+      if (manuallyRescheduled != null)
+        'manually_rescheduled': manuallyRescheduled,
+      if (cancellationReason != null) 'cancellation_reason': cancellationReason,
+      if (sentAt != null) 'sent_at': sentAt,
+      if (cancelledAt != null) 'cancelled_at': cancelledAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RemindersCompanion copyWith({
+    Value<String>? id,
+    Value<String>? pianoId,
+    Value<String>? originTuningId,
+    Value<String>? dueDate,
+    Value<String>? status,
+    Value<bool>? manuallyRescheduled,
+    Value<String?>? cancellationReason,
+    Value<DateTime?>? sentAt,
+    Value<DateTime?>? cancelledAt,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return RemindersCompanion(
+      id: id ?? this.id,
+      pianoId: pianoId ?? this.pianoId,
+      originTuningId: originTuningId ?? this.originTuningId,
+      dueDate: dueDate ?? this.dueDate,
+      status: status ?? this.status,
+      manuallyRescheduled: manuallyRescheduled ?? this.manuallyRescheduled,
+      cancellationReason: cancellationReason ?? this.cancellationReason,
+      sentAt: sentAt ?? this.sentAt,
+      cancelledAt: cancelledAt ?? this.cancelledAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (pianoId.present) {
+      map['piano_id'] = Variable<String>(pianoId.value);
+    }
+    if (originTuningId.present) {
+      map['origin_tuning_id'] = Variable<String>(originTuningId.value);
+    }
+    if (dueDate.present) {
+      map['due_date'] = Variable<String>(dueDate.value);
+    }
+    if (status.present) {
+      map['status'] = Variable<String>(status.value);
+    }
+    if (manuallyRescheduled.present) {
+      map['manually_rescheduled'] = Variable<bool>(manuallyRescheduled.value);
+    }
+    if (cancellationReason.present) {
+      map['cancellation_reason'] = Variable<String>(cancellationReason.value);
+    }
+    if (sentAt.present) {
+      map['sent_at'] = Variable<DateTime>(sentAt.value);
+    }
+    if (cancelledAt.present) {
+      map['cancelled_at'] = Variable<DateTime>(cancelledAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RemindersCompanion(')
+          ..write('id: $id, ')
+          ..write('pianoId: $pianoId, ')
+          ..write('originTuningId: $originTuningId, ')
+          ..write('dueDate: $dueDate, ')
+          ..write('status: $status, ')
+          ..write('manuallyRescheduled: $manuallyRescheduled, ')
+          ..write('cancellationReason: $cancellationReason, ')
+          ..write('sentAt: $sentAt, ')
+          ..write('cancelledAt: $cancelledAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $CustomersTable customers = $CustomersTable(this);
   late final $PianosTable pianos = $PianosTable(this);
   late final $TuningsTable tunings = $TuningsTable(this);
+  late final $RemindersTable reminders = $RemindersTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1918,6 +2609,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     customers,
     pianos,
     tunings,
+    reminders,
   ];
 }
 
@@ -2425,6 +3117,24 @@ final class $$PianosTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$RemindersTable, List<ReminderRecord>>
+  _remindersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.reminders,
+    aliasName: 'pianos__id__reminders__piano_id',
+  );
+
+  $$RemindersTableProcessedTableManager get remindersRefs {
+    final manager = $$RemindersTableTableManager(
+      $_db,
+      $_db.reminders,
+    ).filter((f) => f.pianoId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_remindersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$PianosTableFilterComposer
@@ -2535,6 +3245,31 @@ class $$PianosTableFilterComposer
           }) => $$TuningsTableFilterComposer(
             $db: $db,
             $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> remindersRefs(
+    Expression<bool> Function($$RemindersTableFilterComposer f) f,
+  ) {
+    final $$RemindersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.pianoId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableFilterComposer(
+            $db: $db,
+            $table: $db.reminders,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -2738,6 +3473,31 @@ class $$PianosTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> remindersRefs<T extends Object>(
+    Expression<T> Function($$RemindersTableAnnotationComposer a) f,
+  ) {
+    final $$RemindersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.pianoId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$PianosTableTableManager
@@ -2753,7 +3513,11 @@ class $$PianosTableTableManager
           $$PianosTableUpdateCompanionBuilder,
           (PianoRecord, $$PianosTableReferences),
           PianoRecord,
-          PrefetchHooks Function({bool customerId, bool tuningsRefs})
+          PrefetchHooks Function({
+            bool customerId,
+            bool tuningsRefs,
+            bool remindersRefs,
+          })
         > {
   $$PianosTableTableManager(_$AppDatabase db, $PianosTable table)
     : super(
@@ -2838,61 +3602,96 @@ class $$PianosTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({customerId = false, tuningsRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (tuningsRefs) db.tunings],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (customerId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.customerId,
-                        referencedTable: $$PianosTableReferences
-                            ._customerIdTable(db),
-                        referencedColumn: $$PianosTableReferences
-                            ._customerIdTable(db)
-                            .id,
-                      ) as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                customerId = false,
+                tuningsRefs = false,
+                remindersRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (tuningsRefs) db.tunings,
+                    if (remindersRefs) db.reminders,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (customerId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.customerId,
+                            referencedTable: $$PianosTableReferences
+                                ._customerIdTable(db),
+                            referencedColumn: $$PianosTableReferences
+                                ._customerIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (tuningsRefs)
+                        await $_getPrefetchedData<
+                          PianoRecord,
+                          $PianosTable,
+                          TuningRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PianosTableReferences
+                              ._tuningsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PianosTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).tuningsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.pianoId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (remindersRefs)
+                        await $_getPrefetchedData<
+                          PianoRecord,
+                          $PianosTable,
+                          ReminderRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PianosTableReferences
+                              ._remindersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PianosTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).remindersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.pianoId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (tuningsRefs)
-                    await $_getPrefetchedData<
-                      PianoRecord,
-                      $PianosTable,
-                      TuningRecord
-                    >(
-                      currentTable: table,
-                      referencedTable: $$PianosTableReferences
-                          ._tuningsRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$PianosTableReferences(db, table, p0).tuningsRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.pianoId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -2909,7 +3708,11 @@ typedef $$PianosTableProcessedTableManager =
       $$PianosTableUpdateCompanionBuilder,
       (PianoRecord, $$PianosTableReferences),
       PianoRecord,
-      PrefetchHooks Function({bool customerId, bool tuningsRefs})
+      PrefetchHooks Function({
+        bool customerId,
+        bool tuningsRefs,
+        bool remindersRefs,
+      })
     >;
 typedef $$TuningsTableCreateCompanionBuilder = TuningsCompanion Function({
   required String id,
@@ -2948,6 +3751,24 @@ final class $$TuningsTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$RemindersTable, List<ReminderRecord>>
+  _remindersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.reminders,
+    aliasName: 'tunings__id__reminders__origin_tuning_id',
+  );
+
+  $$RemindersTableProcessedTableManager get remindersRefs {
+    final manager = $$RemindersTableTableManager(
+      $_db,
+      $_db.reminders,
+    ).filter((f) => f.originTuningId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_remindersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -3007,6 +3828,31 @@ class $$TuningsTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> remindersRefs(
+    Expression<bool> Function($$RemindersTableFilterComposer f) f,
+  ) {
+    final $$RemindersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.originTuningId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableFilterComposer(
+            $db: $db,
+            $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -3116,6 +3962,31 @@ class $$TuningsTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> remindersRefs<T extends Object>(
+    Expression<T> Function($$RemindersTableAnnotationComposer a) f,
+  ) {
+    final $$RemindersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.originTuningId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$TuningsTableTableManager
@@ -3131,7 +4002,7 @@ class $$TuningsTableTableManager
           $$TuningsTableUpdateCompanionBuilder,
           (TuningRecord, $$TuningsTableReferences),
           TuningRecord,
-          PrefetchHooks Function({bool pianoId})
+          PrefetchHooks Function({bool pianoId, bool remindersRefs})
         > {
   $$TuningsTableTableManager(_$AppDatabase db, $TuningsTable table)
     : super(
@@ -3188,10 +4059,10 @@ class $$TuningsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({pianoId = false}) {
+          prefetchHooksCallback: ({pianoId = false, remindersRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [],
+              explicitlyWatchedTables: [if (remindersRefs) db.reminders],
               addJoins:
                   <
                     T extends TableManagerState<
@@ -3224,7 +4095,25 @@ class $$TuningsTableTableManager
                     return state;
                   },
               getPrefetchedDataCallback: (items) async {
-                return [];
+                return [
+                  if (remindersRefs)
+                    await $_getPrefetchedData<
+                      TuningRecord,
+                      $TuningsTable,
+                      ReminderRecord
+                    >(
+                      currentTable: table,
+                      referencedTable: $$TuningsTableReferences
+                          ._remindersRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$TuningsTableReferences(db, table, p0).remindersRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where(
+                            (e) => e.originTuningId == item.id,
+                          ),
+                      typedResults: items,
+                    ),
+                ];
               },
             );
           },
@@ -3244,7 +4133,524 @@ typedef $$TuningsTableProcessedTableManager =
       $$TuningsTableUpdateCompanionBuilder,
       (TuningRecord, $$TuningsTableReferences),
       TuningRecord,
-      PrefetchHooks Function({bool pianoId})
+      PrefetchHooks Function({bool pianoId, bool remindersRefs})
+    >;
+typedef $$RemindersTableCreateCompanionBuilder = RemindersCompanion Function({
+  required String id,
+  required String pianoId,
+  required String originTuningId,
+  required String dueDate,
+  required String status,
+  required bool manuallyRescheduled,
+  Value<String?> cancellationReason,
+  Value<DateTime?> sentAt,
+  Value<DateTime?> cancelledAt,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$RemindersTableUpdateCompanionBuilder = RemindersCompanion Function({
+  Value<String> id,
+  Value<String> pianoId,
+  Value<String> originTuningId,
+  Value<String> dueDate,
+  Value<String> status,
+  Value<bool> manuallyRescheduled,
+  Value<String?> cancellationReason,
+  Value<DateTime?> sentAt,
+  Value<DateTime?> cancelledAt,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+final class $$RemindersTableReferences
+    extends BaseReferences<_$AppDatabase, $RemindersTable, ReminderRecord> {
+  $$RemindersTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $PianosTable _pianoIdTable(_$AppDatabase db) =>
+      db.pianos.createAlias('reminders__piano_id__pianos__id');
+
+  $$PianosTableProcessedTableManager get pianoId {
+    final $_column = $_itemColumn<String>('piano_id')!;
+
+    final manager = $$PianosTableTableManager(
+      $_db,
+      $_db.pianos,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_pianoIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $TuningsTable _originTuningIdTable(_$AppDatabase db) =>
+      db.tunings.createAlias('reminders__origin_tuning_id__tunings__id');
+
+  $$TuningsTableProcessedTableManager get originTuningId {
+    final $_column = $_itemColumn<String>('origin_tuning_id')!;
+
+    final manager = $$TuningsTableTableManager(
+      $_db,
+      $_db.tunings,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_originTuningIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$RemindersTableFilterComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get manuallyRescheduled => $composableBuilder(
+    column: $table.manuallyRescheduled,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cancellationReason => $composableBuilder(
+    column: $table.cancellationReason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get sentAt => $composableBuilder(
+    column: $table.sentAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get cancelledAt => $composableBuilder(
+    column: $table.cancelledAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PianosTableFilterComposer get pianoId {
+    final $$PianosTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableFilterComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TuningsTableFilterComposer get originTuningId {
+    final $$TuningsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.originTuningId,
+      referencedTable: $db.tunings,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TuningsTableFilterComposer(
+            $db: $db,
+            $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RemindersTableOrderingComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dueDate => $composableBuilder(
+    column: $table.dueDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get status => $composableBuilder(
+    column: $table.status,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get manuallyRescheduled => $composableBuilder(
+    column: $table.manuallyRescheduled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cancellationReason => $composableBuilder(
+    column: $table.cancellationReason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get sentAt => $composableBuilder(
+    column: $table.sentAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get cancelledAt => $composableBuilder(
+    column: $table.cancelledAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PianosTableOrderingComposer get pianoId {
+    final $$PianosTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableOrderingComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TuningsTableOrderingComposer get originTuningId {
+    final $$TuningsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.originTuningId,
+      referencedTable: $db.tunings,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TuningsTableOrderingComposer(
+            $db: $db,
+            $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RemindersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RemindersTable> {
+  $$RemindersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get dueDate =>
+      $composableBuilder(column: $table.dueDate, builder: (column) => column);
+
+  GeneratedColumn<String> get status =>
+      $composableBuilder(column: $table.status, builder: (column) => column);
+
+  GeneratedColumn<bool> get manuallyRescheduled => $composableBuilder(
+    column: $table.manuallyRescheduled,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cancellationReason => $composableBuilder(
+    column: $table.cancellationReason,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get sentAt =>
+      $composableBuilder(column: $table.sentAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get cancelledAt => $composableBuilder(
+    column: $table.cancelledAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$PianosTableAnnotationComposer get pianoId {
+    final $$PianosTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TuningsTableAnnotationComposer get originTuningId {
+    final $$TuningsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.originTuningId,
+      referencedTable: $db.tunings,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TuningsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$RemindersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RemindersTable,
+          ReminderRecord,
+          $$RemindersTableFilterComposer,
+          $$RemindersTableOrderingComposer,
+          $$RemindersTableAnnotationComposer,
+          $$RemindersTableCreateCompanionBuilder,
+          $$RemindersTableUpdateCompanionBuilder,
+          (ReminderRecord, $$RemindersTableReferences),
+          ReminderRecord,
+          PrefetchHooks Function({bool pianoId, bool originTuningId})
+        > {
+  $$RemindersTableTableManager(_$AppDatabase db, $RemindersTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RemindersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RemindersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RemindersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> pianoId = const Value.absent(),
+                Value<String> originTuningId = const Value.absent(),
+                Value<String> dueDate = const Value.absent(),
+                Value<String> status = const Value.absent(),
+                Value<bool> manuallyRescheduled = const Value.absent(),
+                Value<String?> cancellationReason = const Value.absent(),
+                Value<DateTime?> sentAt = const Value.absent(),
+                Value<DateTime?> cancelledAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RemindersCompanion(
+                id: id,
+                pianoId: pianoId,
+                originTuningId: originTuningId,
+                dueDate: dueDate,
+                status: status,
+                manuallyRescheduled: manuallyRescheduled,
+                cancellationReason: cancellationReason,
+                sentAt: sentAt,
+                cancelledAt: cancelledAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String pianoId,
+                required String originTuningId,
+                required String dueDate,
+                required String status,
+                required bool manuallyRescheduled,
+                Value<String?> cancellationReason = const Value.absent(),
+                Value<DateTime?> sentAt = const Value.absent(),
+                Value<DateTime?> cancelledAt = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => RemindersCompanion.insert(
+                id: id,
+                pianoId: pianoId,
+                originTuningId: originTuningId,
+                dueDate: dueDate,
+                status: status,
+                manuallyRescheduled: manuallyRescheduled,
+                cancellationReason: cancellationReason,
+                sentAt: sentAt,
+                cancelledAt: cancelledAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$RemindersTable, ReminderRecord>(table),
+                  $$RemindersTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({pianoId = false, originTuningId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (pianoId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.pianoId,
+                        referencedTable: $$RemindersTableReferences
+                            ._pianoIdTable(db),
+                        referencedColumn: $$RemindersTableReferences
+                            ._pianoIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+                    if (originTuningId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.originTuningId,
+                        referencedTable: $$RemindersTableReferences
+                            ._originTuningIdTable(db),
+                        referencedColumn: $$RemindersTableReferences
+                            ._originTuningIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$RemindersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RemindersTable,
+      ReminderRecord,
+      $$RemindersTableFilterComposer,
+      $$RemindersTableOrderingComposer,
+      $$RemindersTableAnnotationComposer,
+      $$RemindersTableCreateCompanionBuilder,
+      $$RemindersTableUpdateCompanionBuilder,
+      (ReminderRecord, $$RemindersTableReferences),
+      ReminderRecord,
+      PrefetchHooks Function({bool pianoId, bool originTuningId})
     >;
 
 class $AppDatabaseManager {
@@ -3256,4 +4662,6 @@ class $AppDatabaseManager {
       $$PianosTableTableManager(_db, _db.pianos);
   $$TuningsTableTableManager get tunings =>
       $$TuningsTableTableManager(_db, _db.tunings);
+  $$RemindersTableTableManager get reminders =>
+      $$RemindersTableTableManager(_db, _db.reminders);
 }

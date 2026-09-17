@@ -48,6 +48,23 @@ final class CalendarDate implements Comparable<CalendarDate> {
     return '$y-$m-$d';
   }
 
+  /// Ajoute [months] mois civils. Si le jour n'existe pas dans le mois cible,
+  /// le dernier jour valide de ce mois est retenu.
+  CalendarDate addMonths(int months) {
+    if (months < 1) {
+      throw const CalendarDateInvalid();
+    }
+    final totalMonths = year * 12 + (month - 1) + months;
+    final newYear = totalMonths ~/ 12;
+    final newMonth = (totalMonths % 12) + 1;
+    if (newYear > 9999) {
+      throw const CalendarDateInvalid();
+    }
+    final lastDay = _daysInMonth(newYear, newMonth);
+    final newDay = day <= lastDay ? day : lastDay;
+    return CalendarDate(newYear, newMonth, newDay);
+  }
+
   @override
   int compareTo(CalendarDate other) {
     if (year != other.year) {

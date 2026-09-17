@@ -2,18 +2,28 @@ import '../../domain/clock.dart';
 import '../../domain/customer/civility.dart';
 import '../../domain/customer/customer.dart';
 import '../../domain/customer/customer_repository.dart';
+import '../../domain/piano/piano_repository.dart';
+import '../../domain/reminder/reminder_cancellation_reason.dart';
+import '../../domain/reminder/reminder_repository.dart';
 import '../ports/id_generator.dart';
+import '../ports/transaction_runner.dart';
 
 final class CustomerService {
   CustomerService({
     required this._clock,
     required this._idGenerator,
+    required this._transactions,
     required this._repository,
+    required this._pianos,
+    required this._reminders,
   });
 
   final Clock _clock;
   final IdGenerator _idGenerator;
+  final TransactionRunner _transactions;
   final CustomerRepository _repository;
+  final PianoRepository _pianos;
+  final ReminderRepository _reminders;
 
   Future<Customer> create({
     Civility? civility,
@@ -74,10 +84,38 @@ final class CustomerService {
   }
 
   Future<Customer> archive(CustomerId id) async {
-    final existing = await _requireCustomer(id);
-    final archived = existing.archive(_clock.now());
-    await _repository.update(archived);
-    return archived;
+    final now = _clock.now();
+    return _transactions.run(() async {
+      final existing = await _requireCustomer(id);
+      final archived = existing.archive(now);
+      await _repository.update(archived);
+
+      final pianos = [
+        ...await _pianos.findByCustomerId(
+          customerId: id,
+          filter: PianoStatusFilter.active,
+        ),
+        ...await _pianos.findByCustomerId(
+          customerId: id,
+          filter: PianoStatusFilter.archived,
+        ),
+      ];
+      for (final piano in pianos) {
+        if (piano.remindersEnabled) {
+          await _pianos.update(piano.disableReminders(now));
+        }
+        final scheduled = await _reminders.findScheduledByPianoId(piano.id);
+        if (scheduled != null) {
+          await _reminders.update(
+            scheduled.cancel(
+              reason: ReminderCancellationReason.customerArchived,
+              now: now,
+            ),
+          );
+        }
+      }
+      return archived;
+    });
   }
 
   Future<Customer> restore(CustomerId id) async {

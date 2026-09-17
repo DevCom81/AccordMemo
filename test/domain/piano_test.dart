@@ -128,4 +128,14 @@ void main() {
     expect(restored.isArchived, isFalse);
     expect(restored.customerId, customerId);
   });
+
+  test('disableReminders fonctionne même sur un piano archivé', () {
+    final archived = yamaha().archive(now);
+    final disabled = archived.disableReminders(now.add(const Duration(hours: 1)));
+
+    expect(disabled.isArchived, isTrue);
+    expect(disabled.remindersEnabled, isFalse);
+    expect(disabled.customerId, customerId);
+    expect(identical(disabled.disableReminders(now), disabled), isTrue);
+  });
 }

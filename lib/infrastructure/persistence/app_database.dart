@@ -4,16 +4,17 @@ import 'package:drift/native.dart';
 import 'sqlite_database_path.dart';
 import 'tables/customers_table.dart';
 import 'tables/pianos_table.dart';
+import 'tables/reminders_table.dart';
 import 'tables/tunings_table.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Customers, Pianos, Tunings])
+@DriftDatabase(tables: [Customers, Pianos, Tunings, Reminders])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -23,6 +24,7 @@ class AppDatabase extends _$AppDatabase {
         await _createCustomerIndexes();
         await _createPianoIndexes();
         await _createTuningIndexes();
+        await _createReminderIndexes();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -36,6 +38,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 4) {
           await m.createTable(tunings);
           await _createTuningIndexes();
+        }
+        if (from < 5) {
+          await m.createTable(reminders);
+          await _createReminderIndexes();
         }
       },
       beforeOpen: (OpeningDetails details) async {
@@ -70,6 +76,17 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_tunings_piano_id_tuning_date '
       'ON tunings (piano_id, tuning_date)',
+    );
+  }
+
+  Future<void> _createReminderIndexes() async {
+    await customStatement(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_reminders_one_scheduled_per_piano '
+      'ON reminders (piano_id) WHERE status = \'scheduled\'',
+    );
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_origin_tuning_id '
+      'ON reminders (origin_tuning_id)',
     );
   }
 }
