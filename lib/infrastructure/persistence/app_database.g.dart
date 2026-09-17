@@ -1490,16 +1490,435 @@ class PianosCompanion extends UpdateCompanion<PianoRecord> {
   }
 }
 
+class $TuningsTable extends Tunings
+    with TableInfo<$TuningsTable, TuningRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TuningsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pianoIdMeta = const VerificationMeta(
+    'pianoId',
+  );
+  @override
+  late final GeneratedColumn<String> pianoId = GeneratedColumn<String>(
+    'piano_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES pianos (id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _tuningDateMeta = const VerificationMeta(
+    'tuningDate',
+  );
+  @override
+  late final GeneratedColumn<String> tuningDate = GeneratedColumn<String>(
+    'tuning_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    pianoId,
+    tuningDate,
+    notes,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'tunings';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TuningRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('piano_id')) {
+      context.handle(
+        _pianoIdMeta,
+        pianoId.isAcceptableOrUnknown(data['piano_id']!, _pianoIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pianoIdMeta);
+    }
+    if (data.containsKey('tuning_date')) {
+      context.handle(
+        _tuningDateMeta,
+        tuningDate.isAcceptableOrUnknown(data['tuning_date']!, _tuningDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tuningDateMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TuningRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TuningRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      pianoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}piano_id'],
+      )!,
+      tuningDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tuning_date'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TuningsTable createAlias(String alias) {
+    return $TuningsTable(attachedDatabase, alias);
+  }
+}
+
+class TuningRecord extends DataClass implements Insertable<TuningRecord> {
+  final String id;
+  final String pianoId;
+  final String tuningDate;
+  final String? notes;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const TuningRecord({
+    required this.id,
+    required this.pianoId,
+    required this.tuningDate,
+    this.notes,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['piano_id'] = Variable<String>(pianoId);
+    map['tuning_date'] = Variable<String>(tuningDate);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  TuningsCompanion toCompanion(bool nullToAbsent) {
+    return TuningsCompanion(
+      id: Value(id),
+      pianoId: Value(pianoId),
+      tuningDate: Value(tuningDate),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory TuningRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TuningRecord(
+      id: serializer.fromJson<String>(json['id']),
+      pianoId: serializer.fromJson<String>(json['pianoId']),
+      tuningDate: serializer.fromJson<String>(json['tuningDate']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'pianoId': serializer.toJson<String>(pianoId),
+      'tuningDate': serializer.toJson<String>(tuningDate),
+      'notes': serializer.toJson<String?>(notes),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  TuningRecord copyWith({
+    String? id,
+    String? pianoId,
+    String? tuningDate,
+    Value<String?> notes = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => TuningRecord(
+    id: id ?? this.id,
+    pianoId: pianoId ?? this.pianoId,
+    tuningDate: tuningDate ?? this.tuningDate,
+    notes: notes.present ? notes.value : this.notes,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  TuningRecord copyWithCompanion(TuningsCompanion data) {
+    return TuningRecord(
+      id: data.id.present ? data.id.value : this.id,
+      pianoId: data.pianoId.present ? data.pianoId.value : this.pianoId,
+      tuningDate: data.tuningDate.present
+          ? data.tuningDate.value
+          : this.tuningDate,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TuningRecord(')
+          ..write('id: $id, ')
+          ..write('pianoId: $pianoId, ')
+          ..write('tuningDate: $tuningDate, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, pianoId, tuningDate, notes, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TuningRecord &&
+          other.id == this.id &&
+          other.pianoId == this.pianoId &&
+          other.tuningDate == this.tuningDate &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class TuningsCompanion extends UpdateCompanion<TuningRecord> {
+  final Value<String> id;
+  final Value<String> pianoId;
+  final Value<String> tuningDate;
+  final Value<String?> notes;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const TuningsCompanion({
+    this.id = const Value.absent(),
+    this.pianoId = const Value.absent(),
+    this.tuningDate = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TuningsCompanion.insert({
+    required String id,
+    required String pianoId,
+    required String tuningDate,
+    this.notes = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       pianoId = Value(pianoId),
+       tuningDate = Value(tuningDate),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<TuningRecord> custom({
+    Expression<String>? id,
+    Expression<String>? pianoId,
+    Expression<String>? tuningDate,
+    Expression<String>? notes,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (pianoId != null) 'piano_id': pianoId,
+      if (tuningDate != null) 'tuning_date': tuningDate,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TuningsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? pianoId,
+    Value<String>? tuningDate,
+    Value<String?>? notes,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return TuningsCompanion(
+      id: id ?? this.id,
+      pianoId: pianoId ?? this.pianoId,
+      tuningDate: tuningDate ?? this.tuningDate,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (pianoId.present) {
+      map['piano_id'] = Variable<String>(pianoId.value);
+    }
+    if (tuningDate.present) {
+      map['tuning_date'] = Variable<String>(tuningDate.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TuningsCompanion(')
+          ..write('id: $id, ')
+          ..write('pianoId: $pianoId, ')
+          ..write('tuningDate: $tuningDate, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $CustomersTable customers = $CustomersTable(this);
   late final $PianosTable pianos = $PianosTable(this);
+  late final $TuningsTable tunings = $TuningsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
   @override
-  List<DatabaseSchemaEntity> get allSchemaEntities => [customers, pianos];
+  List<DatabaseSchemaEntity> get allSchemaEntities => [
+    customers,
+    pianos,
+    tunings,
+  ];
 }
 
 typedef $$CustomersTableCreateCompanionBuilder = CustomersCompanion Function({
@@ -1988,6 +2407,24 @@ final class $$PianosTableReferences
       manager.$state.copyWith(prefetchedData: [item]),
     );
   }
+
+  static MultiTypedResultKey<$TuningsTable, List<TuningRecord>>
+  _tuningsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.tunings,
+    aliasName: 'pianos__id__tunings__piano_id',
+  );
+
+  $$TuningsTableProcessedTableManager get tuningsRefs {
+    final manager = $$TuningsTableTableManager(
+      $_db,
+      $_db.tunings,
+    ).filter((f) => f.pianoId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_tuningsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$PianosTableFilterComposer
@@ -2080,6 +2517,31 @@ class $$PianosTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> tuningsRefs(
+    Expression<bool> Function($$TuningsTableFilterComposer f) f,
+  ) {
+    final $$TuningsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tunings,
+      getReferencedColumn: (t) => t.pianoId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TuningsTableFilterComposer(
+            $db: $db,
+            $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -2251,6 +2713,31 @@ class $$PianosTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> tuningsRefs<T extends Object>(
+    Expression<T> Function($$TuningsTableAnnotationComposer a) f,
+  ) {
+    final $$TuningsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.tunings,
+      getReferencedColumn: (t) => t.pianoId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TuningsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$PianosTableTableManager
@@ -2266,7 +2753,7 @@ class $$PianosTableTableManager
           $$PianosTableUpdateCompanionBuilder,
           (PianoRecord, $$PianosTableReferences),
           PianoRecord,
-          PrefetchHooks Function({bool customerId})
+          PrefetchHooks Function({bool customerId, bool tuningsRefs})
         > {
   $$PianosTableTableManager(_$AppDatabase db, $PianosTable table)
     : super(
@@ -2351,10 +2838,10 @@ class $$PianosTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({customerId = false}) {
+          prefetchHooksCallback: ({customerId = false, tuningsRefs = false}) {
             return PrefetchHooks(
               db: db,
-              explicitlyWatchedTables: [],
+              explicitlyWatchedTables: [if (tuningsRefs) db.tunings],
               addJoins:
                   <
                     T extends TableManagerState<
@@ -2386,7 +2873,23 @@ class $$PianosTableTableManager
                     return state;
                   },
               getPrefetchedDataCallback: (items) async {
-                return [];
+                return [
+                  if (tuningsRefs)
+                    await $_getPrefetchedData<
+                      PianoRecord,
+                      $PianosTable,
+                      TuningRecord
+                    >(
+                      currentTable: table,
+                      referencedTable: $$PianosTableReferences
+                          ._tuningsRefsTable(db),
+                      managerFromTypedResult: (p0) =>
+                          $$PianosTableReferences(db, table, p0).tuningsRefs,
+                      referencedItemsForCurrentItem: (item, referencedItems) =>
+                          referencedItems.where((e) => e.pianoId == item.id),
+                      typedResults: items,
+                    ),
+                ];
               },
             );
           },
@@ -2406,7 +2909,342 @@ typedef $$PianosTableProcessedTableManager =
       $$PianosTableUpdateCompanionBuilder,
       (PianoRecord, $$PianosTableReferences),
       PianoRecord,
-      PrefetchHooks Function({bool customerId})
+      PrefetchHooks Function({bool customerId, bool tuningsRefs})
+    >;
+typedef $$TuningsTableCreateCompanionBuilder = TuningsCompanion Function({
+  required String id,
+  required String pianoId,
+  required String tuningDate,
+  Value<String?> notes,
+  required DateTime createdAt,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$TuningsTableUpdateCompanionBuilder = TuningsCompanion Function({
+  Value<String> id,
+  Value<String> pianoId,
+  Value<String> tuningDate,
+  Value<String?> notes,
+  Value<DateTime> createdAt,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+final class $$TuningsTableReferences
+    extends BaseReferences<_$AppDatabase, $TuningsTable, TuningRecord> {
+  $$TuningsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $PianosTable _pianoIdTable(_$AppDatabase db) =>
+      db.pianos.createAlias('tunings__piano_id__pianos__id');
+
+  $$PianosTableProcessedTableManager get pianoId {
+    final $_column = $_itemColumn<String>('piano_id')!;
+
+    final manager = $$PianosTableTableManager(
+      $_db,
+      $_db.pianos,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_pianoIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$TuningsTableFilterComposer
+    extends Composer<_$AppDatabase, $TuningsTable> {
+  $$TuningsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tuningDate => $composableBuilder(
+    column: $table.tuningDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PianosTableFilterComposer get pianoId {
+    final $$PianosTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableFilterComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TuningsTableOrderingComposer
+    extends Composer<_$AppDatabase, $TuningsTable> {
+  $$TuningsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tuningDate => $composableBuilder(
+    column: $table.tuningDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PianosTableOrderingComposer get pianoId {
+    final $$PianosTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableOrderingComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TuningsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $TuningsTable> {
+  $$TuningsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get tuningDate => $composableBuilder(
+    column: $table.tuningDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$PianosTableAnnotationComposer get pianoId {
+    final $$PianosTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$TuningsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $TuningsTable,
+          TuningRecord,
+          $$TuningsTableFilterComposer,
+          $$TuningsTableOrderingComposer,
+          $$TuningsTableAnnotationComposer,
+          $$TuningsTableCreateCompanionBuilder,
+          $$TuningsTableUpdateCompanionBuilder,
+          (TuningRecord, $$TuningsTableReferences),
+          TuningRecord,
+          PrefetchHooks Function({bool pianoId})
+        > {
+  $$TuningsTableTableManager(_$AppDatabase db, $TuningsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TuningsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TuningsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TuningsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> pianoId = const Value.absent(),
+                Value<String> tuningDate = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TuningsCompanion(
+                id: id,
+                pianoId: pianoId,
+                tuningDate: tuningDate,
+                notes: notes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String pianoId,
+                required String tuningDate,
+                Value<String?> notes = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TuningsCompanion.insert(
+                id: id,
+                pianoId: pianoId,
+                tuningDate: tuningDate,
+                notes: notes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TuningsTable, TuningRecord>(table),
+                  $$TuningsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({pianoId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (pianoId) {
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.pianoId,
+                        referencedTable: $$TuningsTableReferences._pianoIdTable(
+                          db,
+                        ),
+                        referencedColumn: $$TuningsTableReferences
+                            ._pianoIdTable(db)
+                            .id,
+                      ) as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$TuningsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $TuningsTable,
+      TuningRecord,
+      $$TuningsTableFilterComposer,
+      $$TuningsTableOrderingComposer,
+      $$TuningsTableAnnotationComposer,
+      $$TuningsTableCreateCompanionBuilder,
+      $$TuningsTableUpdateCompanionBuilder,
+      (TuningRecord, $$TuningsTableReferences),
+      TuningRecord,
+      PrefetchHooks Function({bool pianoId})
     >;
 
 class $AppDatabaseManager {
@@ -2416,4 +3254,6 @@ class $AppDatabaseManager {
       $$CustomersTableTableManager(_db, _db.customers);
   $$PianosTableTableManager get pianos =>
       $$PianosTableTableManager(_db, _db.pianos);
+  $$TuningsTableTableManager get tunings =>
+      $$TuningsTableTableManager(_db, _db.tunings);
 }

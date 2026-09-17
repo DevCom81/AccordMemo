@@ -21,7 +21,7 @@ final class _Lot2SchemaUser implements QueryExecutorUser {
 }
 
 void main() {
-  test('migre le schéma 2 vers 3 en créant pianos', () async {
+  test('migre le schéma 2 jusqu’à la version courante en créant pianos', () async {
     final directory = await Directory.systemTemp.createTemp(
       'accord_memo_migrate_pianos_',
     );
@@ -83,9 +83,16 @@ CREATE TABLE customers (
         .get();
     expect(migratedPianos, isNotEmpty);
 
+    final migratedTunings = await database
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tunings'",
+        )
+        .get();
+    expect(migratedTunings, isNotEmpty);
+
     final migratedVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(migratedVersion.read<int>('user_version'), 3);
+    expect(migratedVersion.read<int>('user_version'), 4);
   });
 }

@@ -51,9 +51,23 @@ void main() {
         .get();
     expect(migratedTables, isNotEmpty);
 
+    final migratedPianos = await database
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'pianos'",
+        )
+        .get();
+    expect(migratedPianos, isNotEmpty);
+
+    final migratedTunings = await database
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tunings'",
+        )
+        .get();
+    expect(migratedTunings, isNotEmpty);
+
     final migratedVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(migratedVersion.read<int>('user_version'), 3);
+    expect(migratedVersion.read<int>('user_version'), 4);
   });
 }

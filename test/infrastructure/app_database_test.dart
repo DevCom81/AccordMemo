@@ -15,13 +15,13 @@ void main() {
     final userVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(userVersion.read<int>('user_version'), 3);
+    expect(userVersion.read<int>('user_version'), 4);
 
     final tables = await database
         .customSelect(
-          "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('customers', 'pianos')",
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('customers', 'pianos', 'tunings')",
         )
         .get();
-    expect(tables, hasLength(2));
+    expect(tables, hasLength(3));
   });
 }

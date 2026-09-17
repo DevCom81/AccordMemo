@@ -4,15 +4,16 @@ import 'package:drift/native.dart';
 import 'sqlite_database_path.dart';
 import 'tables/customers_table.dart';
 import 'tables/pianos_table.dart';
+import 'tables/tunings_table.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Customers, Pianos])
+@DriftDatabase(tables: [Customers, Pianos, Tunings])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -21,6 +22,7 @@ class AppDatabase extends _$AppDatabase {
         await m.createAll();
         await _createCustomerIndexes();
         await _createPianoIndexes();
+        await _createTuningIndexes();
       },
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 2) {
@@ -30,6 +32,10 @@ class AppDatabase extends _$AppDatabase {
         if (from < 3) {
           await m.createTable(pianos);
           await _createPianoIndexes();
+        }
+        if (from < 4) {
+          await m.createTable(tunings);
+          await _createTuningIndexes();
         }
       },
       beforeOpen: (OpeningDetails details) async {
@@ -57,6 +63,13 @@ class AppDatabase extends _$AppDatabase {
     await customStatement(
       'CREATE INDEX IF NOT EXISTS idx_pianos_archived_at '
       'ON pianos (archived_at)',
+    );
+  }
+
+  Future<void> _createTuningIndexes() async {
+    await customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_tunings_piano_id_tuning_date '
+      'ON tunings (piano_id, tuning_date)',
     );
   }
 }
