@@ -114,4 +114,39 @@ void main() {
       throwsA(isA<CalendarDateInvalid>()),
     );
   });
+
+  test('fromLocalInstant lit year/month/day de l’instant local', () {
+    final local = DateTime(2026, 9, 17, 8, 30);
+    expect(CalendarDate.fromLocalInstant(local), CalendarDate(2026, 9, 17));
+
+    final utc = DateTime.utc(2026, 9, 17, 10);
+    final asLocal = utc.toLocal();
+    expect(
+      CalendarDate.fromLocalInstant(utc),
+      CalendarDate(asLocal.year, asLocal.month, asLocal.day),
+    );
+  });
+
+  test('addDays(0) renvoie la même date', () {
+    final date = CalendarDate(2026, 9, 17);
+    expect(date.addDays(0), date);
+  });
+
+  test('addDays traverse un mois, une année, février et une année bissextile', () {
+    expect(CalendarDate(2026, 1, 31).addDays(1), CalendarDate(2026, 2, 1));
+    expect(CalendarDate(2026, 12, 31).addDays(1), CalendarDate(2027, 1, 1));
+    expect(CalendarDate(2026, 2, 28).addDays(1), CalendarDate(2026, 3, 1));
+    expect(CalendarDate(2028, 2, 28).addDays(1), CalendarDate(2028, 2, 29));
+    expect(CalendarDate(2028, 2, 29).addDays(1), CalendarDate(2028, 3, 1));
+    expect(CalendarDate(2026, 9, 17).addDays(-1), CalendarDate(2026, 9, 16));
+  });
+
+  test('daysUntil est positif, négatif ou nul', () {
+    final today = CalendarDate(2026, 9, 17);
+    expect(today.daysUntil(CalendarDate(2026, 9, 24)), 7);
+    expect(today.daysUntil(CalendarDate(2026, 9, 17)), 0);
+    expect(today.daysUntil(CalendarDate(2026, 9, 15)), -2);
+    expect(CalendarDate(2026, 2, 28).daysUntil(CalendarDate(2026, 3, 1)), 1);
+    expect(CalendarDate(2028, 2, 28).daysUntil(CalendarDate(2028, 3, 1)), 2);
+  });
 }

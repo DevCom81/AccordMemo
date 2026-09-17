@@ -37,7 +37,7 @@ final class RecordTuning {
     String? notes,
   }) async {
     final now = _clock.now();
-    final today = _todayFrom(now);
+    final today = CalendarDate.fromLocalInstant(now);
     return _transactions.run(() async {
       final piano = await _requirePiano(pianoId);
       final tuning = Tuning.create(
@@ -91,9 +91,4 @@ final class RecordTuning {
     }
     return piano;
   }
-}
-
-CalendarDate _todayFrom(DateTime now) {
-  final local = now.toLocal();
-  return CalendarDate(local.year, local.month, local.day);
 }

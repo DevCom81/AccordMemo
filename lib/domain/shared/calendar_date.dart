@@ -20,6 +20,11 @@ final class CalendarDate implements Comparable<CalendarDate> {
     return CalendarDate._(year, month, day);
   }
 
+  factory CalendarDate.fromLocalInstant(DateTime instant) {
+    final local = instant.toLocal();
+    return CalendarDate(local.year, local.month, local.day);
+  }
+
   factory CalendarDate.parseIso(String raw) {
     final value = raw.trim();
     final match = _isoPattern.firstMatch(value);
@@ -63,6 +68,28 @@ final class CalendarDate implements Comparable<CalendarDate> {
     final lastDay = _daysInMonth(newYear, newMonth);
     final newDay = day <= lastDay ? day : lastDay;
     return CalendarDate(newYear, newMonth, newDay);
+  }
+
+  /// Ajoute [days] jours civils. [days] peut être négatif. [days] == 0
+  /// renvoie la même date. L'arithmétique est faite en UTC date-only
+  /// pour rester indépendante du DST.
+  CalendarDate addDays(int days) {
+    if (days == 0) {
+      return this;
+    }
+    final shifted = DateTime.utc(year, month, day).add(Duration(days: days));
+    if (shifted.year < 1 || shifted.year > 9999) {
+      throw const CalendarDateInvalid();
+    }
+    return CalendarDate(shifted.year, shifted.month, shifted.day);
+  }
+
+  /// Nombre de jours civils de cette date vers [other].
+  /// Positif si [other] est après, négatif si [other] est avant.
+  int daysUntil(CalendarDate other) {
+    final start = DateTime.utc(year, month, day);
+    final end = DateTime.utc(other.year, other.month, other.day);
+    return end.difference(start).inDays;
   }
 
   @override

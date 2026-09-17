@@ -40,7 +40,7 @@ final class ReminderService {
     final now = _clock.now();
     final updated = existing.reschedule(
       newDueDate: newDueDate,
-      today: _todayFrom(now),
+      today: CalendarDate.fromLocalInstant(now),
       now: now,
     );
     return _transactions.run(() async {
@@ -94,9 +94,4 @@ final class ReminderService {
     }
     return reminder;
   }
-}
-
-CalendarDate _todayFrom(DateTime now) {
-  final local = now.toLocal();
-  return CalendarDate(local.year, local.month, local.day);
 }

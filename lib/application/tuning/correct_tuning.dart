@@ -36,7 +36,7 @@ final class CorrectTuning {
     String? notes,
   }) async {
     final now = _clock.now();
-    final today = _todayFrom(now);
+    final today = CalendarDate.fromLocalInstant(now);
     final existing = await _requireTuning(id);
     final updated = existing.changeDetails(
       tuningDate: tuningDate,
@@ -92,9 +92,4 @@ final class CorrectTuning {
     }
     return piano;
   }
-}
-
-CalendarDate _todayFrom(DateTime now) {
-  final local = now.toLocal();
-  return CalendarDate(local.year, local.month, local.day);
 }

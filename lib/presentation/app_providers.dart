@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/customer/customer_service.dart';
+import '../application/dashboard/dashboard_reminder_query.dart';
+import '../application/dashboard/dashboard_service.dart';
+import '../application/dashboard/dashboard_snapshot.dart';
 import '../application/piano/piano_service.dart';
 import '../application/ports/id_generator.dart';
 import '../application/ports/transaction_runner.dart';
@@ -18,6 +21,7 @@ import '../infrastructure/ids/uuid_id_generator.dart';
 import '../infrastructure/persistence/app_database.dart';
 import '../infrastructure/persistence/drift_activity_repository.dart';
 import '../infrastructure/persistence/drift_customer_repository.dart';
+import '../infrastructure/persistence/drift_dashboard_reminder_query.dart';
 import '../infrastructure/persistence/drift_piano_repository.dart';
 import '../infrastructure/persistence/drift_reminder_repository.dart';
 import '../infrastructure/persistence/drift_transaction_runner.dart';
@@ -124,4 +128,19 @@ final correctTuningProvider = Provider<CorrectTuning>((ref) {
     reminders: ref.watch(reminderRepositoryProvider),
     activities: ref.watch(activityRepositoryProvider),
   );
+});
+
+final dashboardReminderQueryProvider = Provider<DashboardReminderQuery>((ref) {
+  return DriftDashboardReminderQuery(ref.watch(appDatabaseProvider));
+});
+
+final dashboardServiceProvider = Provider<DashboardService>((ref) {
+  return DashboardService(
+    clock: ref.watch(clockProvider),
+    query: ref.watch(dashboardReminderQueryProvider),
+  );
+});
+
+final dashboardSnapshotProvider = FutureProvider<DashboardSnapshot>((ref) {
+  return ref.watch(dashboardServiceProvider).load();
 });
