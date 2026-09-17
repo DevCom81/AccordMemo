@@ -75,6 +75,6 @@ void main() {
     final migratedVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(migratedVersion.read<int>('user_version'), 5);
+    expect(migratedVersion.read<int>('user_version'), 6);
   });
 }

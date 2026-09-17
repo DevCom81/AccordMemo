@@ -1,6 +1,7 @@
 import 'package:accord_memo/application/ports/transaction_runner.dart';
 import 'package:accord_memo/application/tuning/record_tuning.dart';
 import 'package:accord_memo/application/tuning/tuning_service.dart';
+import 'package:accord_memo/domain/activity/activity_type.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/piano/piano.dart';
 import 'package:accord_memo/domain/reminder/reminder_cancellation_reason.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_id_generator.dart';
 import '../support/fixed_clock.dart';
+import '../support/in_memory_activity_repository.dart';
 import '../support/in_memory_piano_repository.dart';
 import '../support/in_memory_reminder_repository.dart';
 import '../support/in_memory_tuning_repository.dart';
@@ -29,6 +31,7 @@ void main() {
   late InMemoryPianoRepository pianos;
   late InMemoryTuningRepository tunings;
   late InMemoryReminderRepository reminders;
+  late InMemoryActivityRepository activities;
   late _CountingTransactionRunner transactions;
   late RecordTuning recordTuning;
   late TuningService tuningService;
@@ -38,6 +41,7 @@ void main() {
     pianos = InMemoryPianoRepository();
     tunings = InMemoryTuningRepository();
     reminders = InMemoryReminderRepository();
+    activities = InMemoryActivityRepository(pianos);
     transactions = _CountingTransactionRunner();
     recordTuning = RecordTuning(
       clock: FixedClock(now),
@@ -46,11 +50,13 @@ void main() {
         'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
         'ffffffff-ffff-4fff-8fff-ffffffffffff',
         '99999999-9999-4999-8999-999999999999',
+        ...spareIds(),
       ]),
       transactions: transactions,
       tunings: tunings,
       pianos: pianos,
       reminders: reminders,
+      activities: activities,
     );
     tuningService = TuningService(tunings: tunings);
   });
@@ -103,6 +109,20 @@ void main() {
     expect(reminder.manuallyRescheduled, isFalse);
   });
 
+  test('crée exactement une Activity tuningCreated', () async {
+    final piano = await insertPiano();
+    final tuning = await recordTuning.execute(
+      pianoId: piano.id,
+      tuningDate: CalendarDate(2026, 1, 5),
+    );
+
+    final journal = await activities.findByPianoId(pianoId: piano.id, limit: 10);
+    expect(journal, hasLength(1));
+    expect(journal.single.type, ActivityType.tuningCreated);
+    expect(journal.single.tuningId, tuning.id);
+    expect(journal.single.occurredAt, now);
+  });
+
   test('refuse un piano inexistant', () async {
     await expectLater(
       recordTuning.execute(
@@ -146,6 +166,9 @@ void main() {
     );
 
     expect(await reminders.findScheduledByPianoId(piano.id), isNull);
+    final journal = await activities.findByPianoId(pianoId: piano.id, limit: 10);
+    expect(journal, hasLength(1));
+    expect(journal.single.type, ActivityType.tuningCreated);
   });
 
   test('annule le scheduled précédent puis crée le nouveau si enabled', () async {
@@ -173,6 +196,13 @@ void main() {
     expect(current, isNotNull);
     expect(current!.originTuningId, second.id);
     expect(current.dueDate, CalendarDate(2026, 3, 1).addMonths(12));
+
+    final journal = await activities.findByPianoId(pianoId: piano.id, limit: 10);
+    expect(journal, hasLength(2));
+    expect(
+      journal.every((item) => item.type == ActivityType.tuningCreated),
+      isTrue,
+    );
   });
 
   test('refuse une date future dérivée du Clock applicatif', () async {

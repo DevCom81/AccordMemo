@@ -143,6 +143,6 @@ VALUES ('piano-1', 'customer-1', 'Yamaha', 12, 1, 0, 0)
     final migratedVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(migratedVersion.read<int>('user_version'), 5);
+    expect(migratedVersion.read<int>('user_version'), 6);
   });
 }

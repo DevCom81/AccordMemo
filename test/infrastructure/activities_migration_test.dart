@@ -6,10 +6,10 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
-/// Utilisateur Drift simulant le Lot 4 : schemaVersion 4.
-final class _Lot4SchemaUser implements QueryExecutorUser {
+/// Utilisateur Drift simulant le Lot 5 : schemaVersion 5.
+final class _Lot5SchemaUser implements QueryExecutorUser {
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   Future<void> beforeOpen(
@@ -19,17 +19,17 @@ final class _Lot4SchemaUser implements QueryExecutorUser {
 }
 
 void main() {
-  test('migre le schéma 4 vers 5 en créant reminders', () async {
+  test('migre le schéma 5 vers 6 en créant activities', () async {
     final directory = await Directory.systemTemp.createTemp(
-      'accord_memo_migrate_reminders_',
+      'accord_memo_migrate_activities_',
     );
     addTearDown(() => directory.delete(recursive: true));
     final file = File(p.join(directory.path, 'accord_memo.db'));
 
-    final v4Executor = NativeDatabase(file);
-    await v4Executor.ensureOpen(_Lot4SchemaUser());
+    final v5Executor = NativeDatabase(file);
+    await v5Executor.ensureOpen(_Lot5SchemaUser());
     try {
-      await v4Executor.runCustom('''
+      await v5Executor.runCustom('''
 CREATE TABLE customers (
   id TEXT NOT NULL PRIMARY KEY,
   civility TEXT NULL,
@@ -45,7 +45,7 @@ CREATE TABLE customers (
   updated_at INTEGER NOT NULL
 )
 ''');
-      await v4Executor.runCustom('''
+      await v5Executor.runCustom('''
 CREATE TABLE pianos (
   id TEXT NOT NULL PRIMARY KEY,
   customer_id TEXT NOT NULL REFERENCES customers (id) ON DELETE RESTRICT,
@@ -62,7 +62,7 @@ CREATE TABLE pianos (
   updated_at INTEGER NOT NULL
 )
 ''');
-      await v4Executor.runCustom('''
+      await v5Executor.runCustom('''
 CREATE TABLE tunings (
   id TEXT NOT NULL PRIMARY KEY,
   piano_id TEXT NOT NULL REFERENCES pianos (id) ON DELETE RESTRICT,
@@ -72,75 +72,88 @@ CREATE TABLE tunings (
   updated_at INTEGER NOT NULL
 )
 ''');
-      await v4Executor.runCustom('''
+      await v5Executor.runCustom('''
+CREATE TABLE reminders (
+  id TEXT NOT NULL PRIMARY KEY,
+  piano_id TEXT NOT NULL REFERENCES pianos (id) ON DELETE RESTRICT,
+  origin_tuning_id TEXT NOT NULL REFERENCES tunings (id) ON DELETE RESTRICT,
+  due_date TEXT NOT NULL,
+  status TEXT NOT NULL,
+  manually_rescheduled INTEGER NOT NULL CHECK ("manually_rescheduled" IN (0, 1)),
+  cancellation_reason TEXT NULL,
+  sent_at INTEGER NULL,
+  cancelled_at INTEGER NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  CHECK (status IN ('scheduled', 'sent', 'cancelled'))
+)
+''');
+      await v5Executor.runCustom(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_reminders_one_scheduled_per_piano "
+        "ON reminders (piano_id) WHERE status = 'scheduled'",
+      );
+      await v5Executor.runCustom(
+        'CREATE INDEX IF NOT EXISTS idx_reminders_origin_tuning_id '
+        'ON reminders (origin_tuning_id)',
+      );
+      await v5Executor.runCustom('''
 INSERT INTO customers (id, last_name, created_at, updated_at)
 VALUES ('customer-1', 'Dupont', 0, 0)
 ''');
-      await v4Executor.runCustom('''
+      await v5Executor.runCustom('''
 INSERT INTO pianos (
   id, customer_id, brand, reminder_interval_months, reminders_enabled,
   created_at, updated_at
 )
 VALUES ('piano-1', 'customer-1', 'Yamaha', 12, 1, 0, 0)
 ''');
-      await v4Executor.runCustom('''
+      await v5Executor.runCustom('''
 INSERT INTO tunings (id, piano_id, tuning_date, created_at, updated_at)
 VALUES ('tuning-1', 'piano-1', '2026-09-17', 0, 0)
 ''');
+      await v5Executor.runCustom('''
+INSERT INTO reminders (
+  id, piano_id, origin_tuning_id, due_date, status, manually_rescheduled,
+  created_at, updated_at
+)
+VALUES ('reminder-1', 'piano-1', 'tuning-1', '2027-09-17', 'scheduled', 0, 0, 0)
+''');
 
-      final version = await v4Executor.runSelect('PRAGMA user_version', []);
-      expect(version.single['user_version'], 4);
+      final version = await v5Executor.runSelect('PRAGMA user_version', []);
+      expect(version.single['user_version'], 5);
 
-      final customers = await v4Executor.runSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'customers'",
+      final activityTables = await v5Executor.runSelect(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'activities'",
         [],
       );
-      expect(customers, isNotEmpty);
-
-      final pianos = await v4Executor.runSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'pianos'",
-        [],
-      );
-      expect(pianos, isNotEmpty);
-
-      final tunings = await v4Executor.runSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'tunings'",
-        [],
-      );
-      expect(tunings, isNotEmpty);
-
-      final reminderTables = await v4Executor.runSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reminders'",
-        [],
-      );
-      expect(reminderTables, isEmpty);
+      expect(activityTables, isEmpty);
     } finally {
-      await v4Executor.close();
+      await v5Executor.close();
     }
 
     final database = AppDatabase(NativeDatabase(file));
     addTearDown(database.close);
 
-    final migratedReminders = await database
+    final migratedActivities = await database
         .customSelect(
-          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'reminders'",
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'activities'",
         )
         .get();
-    expect(migratedReminders, isNotEmpty);
+    expect(migratedActivities, isNotEmpty);
 
-    final uniqueIndex = await database
+    final occurredAtIndex = await database
         .customSelect(
-          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_reminders_one_scheduled_per_piano'",
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_activities_occurred_at'",
         )
         .get();
-    expect(uniqueIndex, isNotEmpty);
+    expect(occurredAtIndex, isNotEmpty);
 
-    final originIndex = await database
+    final pianoIndex = await database
         .customSelect(
-          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_reminders_origin_tuning_id'",
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_activities_piano_id_occurred_at'",
         )
         .get();
-    expect(originIndex, isNotEmpty);
+    expect(pianoIndex, isNotEmpty);
 
     final preservedCustomer = await database
         .customSelect("SELECT last_name FROM customers WHERE id = 'customer-1'")
@@ -156,6 +169,11 @@ VALUES ('tuning-1', 'piano-1', '2026-09-17', 0, 0)
         .customSelect("SELECT tuning_date FROM tunings WHERE id = 'tuning-1'")
         .getSingle();
     expect(preservedTuning.read<String>('tuning_date'), '2026-09-17');
+
+    final preservedReminder = await database
+        .customSelect("SELECT due_date FROM reminders WHERE id = 'reminder-1'")
+        .getSingle();
+    expect(preservedReminder.read<String>('due_date'), '2027-09-17');
 
     final migratedVersion = await database
         .customSelect('PRAGMA user_version')

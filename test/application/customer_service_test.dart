@@ -2,6 +2,7 @@ import 'package:accord_memo/application/customer/customer_service.dart';
 import 'package:accord_memo/application/piano/piano_service.dart';
 import 'package:accord_memo/application/ports/transaction_runner.dart';
 import 'package:accord_memo/application/tuning/record_tuning.dart';
+import 'package:accord_memo/domain/activity/activity_type.dart';
 import 'package:accord_memo/domain/customer/civility.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/customer/customer_repository.dart';
@@ -13,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_id_generator.dart';
 import '../support/fixed_clock.dart';
+import '../support/in_memory_activity_repository.dart';
 import '../support/in_memory_customer_repository.dart';
 import '../support/in_memory_piano_repository.dart';
 import '../support/in_memory_reminder_repository.dart';
@@ -33,6 +35,7 @@ void main() {
   late InMemoryPianoRepository pianos;
   late InMemoryTuningRepository tunings;
   late InMemoryReminderRepository reminders;
+  late InMemoryActivityRepository activities;
   late _CountingTransactionRunner transactions;
   late CustomerService service;
   final now = DateTime.utc(2026, 9, 17, 10);
@@ -42,14 +45,19 @@ void main() {
     pianos = InMemoryPianoRepository();
     tunings = InMemoryTuningRepository();
     reminders = InMemoryReminderRepository();
+    activities = InMemoryActivityRepository(pianos);
     transactions = _CountingTransactionRunner();
     service = CustomerService(
       clock: FixedClock(now),
-      idGenerator: FakeIdGenerator(['11111111-1111-4111-8111-111111111111']),
+      idGenerator: FakeIdGenerator([
+        '11111111-1111-4111-8111-111111111111',
+        ...spareIds(),
+      ]),
       transactions: transactions,
       repository: repository,
       pianos: pianos,
       reminders: reminders,
+      activities: activities,
     );
   });
 
@@ -109,6 +117,7 @@ void main() {
       repository: repository,
       pianos: pianos,
       reminders: reminders,
+      activities: activities,
     ).create(lastName: 'Martin', city: 'Albi');
     await service.archive(other.id);
 
@@ -127,11 +136,13 @@ void main() {
       idGenerator: FakeIdGenerator([
         'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        ...spareIds(),
       ]),
       transactions: transactions,
       pianos: pianos,
       customers: repository,
       reminders: reminders,
+      activities: activities,
     );
     final recordTuning = RecordTuning(
       clock: FixedClock(now),
@@ -140,11 +151,13 @@ void main() {
         'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
         'ffffffff-ffff-4fff-8fff-ffffffffffff',
         '99999999-9999-4999-8999-999999999999',
+        ...spareIds(),
       ]),
       transactions: transactions,
       tunings: tunings,
       pianos: pianos,
       reminders: reminders,
+      activities: activities,
     );
 
     final customer = await service.create(lastName: 'Dupont');
@@ -188,6 +201,14 @@ void main() {
       ReminderCancellationReason.customerArchived,
     );
 
+    final disabled = (await activities.findByCustomerId(
+      customerId: customer.id,
+      limit: 10,
+    )).where((item) => item.type == ActivityType.reminderDisabled).toList();
+    expect(disabled, hasLength(2));
+    expect(disabled.map((item) => item.pianoId).toSet(), {first.id, second.id});
+    expect(disabled.map((item) => item.occurredAt).toSet(), {now});
+
     await service.restore(customer.id);
     final restoredCustomer = await service.getById(customer.id);
     expect(restoredCustomer!.isArchived, isFalse);
@@ -202,5 +223,46 @@ void main() {
       filter: PianoStatusFilter.active,
     );
     expect(actives, hasLength(2));
+  });
+
+  test('archive : une reminderDisabled seulement si true → false', () async {
+    final pianoService = PianoService(
+      clock: FixedClock(now),
+      idGenerator: FakeIdGenerator([
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        ...spareIds(),
+      ]),
+      transactions: transactions,
+      pianos: pianos,
+      customers: repository,
+      reminders: reminders,
+      activities: activities,
+    );
+
+    final customer = await service.create(lastName: 'Dupont');
+    final enabled = await pianoService.create(
+      customerId: customer.id,
+      brand: 'Yamaha',
+    );
+    final alreadyDisabled = await pianoService.create(
+      customerId: customer.id,
+      brand: 'Kawai',
+      remindersEnabled: false,
+    );
+
+    await service.archive(customer.id);
+
+    final disabled = (await activities.findByCustomerId(
+      customerId: customer.id,
+      limit: 10,
+    )).where((item) => item.type == ActivityType.reminderDisabled).toList();
+    expect(disabled, hasLength(1));
+    expect(disabled.single.pianoId, enabled.id);
+    expect(disabled.single.occurredAt, now);
+    expect(
+      await activities.findByPianoId(pianoId: alreadyDisabled.id, limit: 10),
+      isEmpty,
+    );
   });
 }

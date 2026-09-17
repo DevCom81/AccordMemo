@@ -2594,6 +2594,538 @@ class RemindersCompanion extends UpdateCompanion<ReminderRecord> {
   }
 }
 
+class $ActivitiesTable extends Activities
+    with TableInfo<$ActivitiesTable, ActivityRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ActivitiesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pianoIdMeta = const VerificationMeta(
+    'pianoId',
+  );
+  @override
+  late final GeneratedColumn<String> pianoId = GeneratedColumn<String>(
+    'piano_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES pianos (id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _tuningIdMeta = const VerificationMeta(
+    'tuningId',
+  );
+  @override
+  late final GeneratedColumn<String> tuningId = GeneratedColumn<String>(
+    'tuning_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES tunings (id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _reminderIdMeta = const VerificationMeta(
+    'reminderId',
+  );
+  @override
+  late final GeneratedColumn<String> reminderId = GeneratedColumn<String>(
+    'reminder_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES reminders (id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _previousDateMeta = const VerificationMeta(
+    'previousDate',
+  );
+  @override
+  late final GeneratedColumn<String> previousDate = GeneratedColumn<String>(
+    'previous_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _newDateMeta = const VerificationMeta(
+    'newDate',
+  );
+  @override
+  late final GeneratedColumn<String> newDate = GeneratedColumn<String>(
+    'new_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    type,
+    pianoId,
+    tuningId,
+    reminderId,
+    previousDate,
+    newDate,
+    occurredAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'activities';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ActivityRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('piano_id')) {
+      context.handle(
+        _pianoIdMeta,
+        pianoId.isAcceptableOrUnknown(data['piano_id']!, _pianoIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pianoIdMeta);
+    }
+    if (data.containsKey('tuning_id')) {
+      context.handle(
+        _tuningIdMeta,
+        tuningId.isAcceptableOrUnknown(data['tuning_id']!, _tuningIdMeta),
+      );
+    }
+    if (data.containsKey('reminder_id')) {
+      context.handle(
+        _reminderIdMeta,
+        reminderId.isAcceptableOrUnknown(data['reminder_id']!, _reminderIdMeta),
+      );
+    }
+    if (data.containsKey('previous_date')) {
+      context.handle(
+        _previousDateMeta,
+        previousDate.isAcceptableOrUnknown(
+          data['previous_date']!,
+          _previousDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('new_date')) {
+      context.handle(
+        _newDateMeta,
+        newDate.isAcceptableOrUnknown(data['new_date']!, _newDateMeta),
+      );
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ActivityRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ActivityRecord(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      pianoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}piano_id'],
+      )!,
+      tuningId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tuning_id'],
+      ),
+      reminderId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reminder_id'],
+      ),
+      previousDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}previous_date'],
+      ),
+      newDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}new_date'],
+      ),
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ActivitiesTable createAlias(String alias) {
+    return $ActivitiesTable(attachedDatabase, alias);
+  }
+}
+
+class ActivityRecord extends DataClass implements Insertable<ActivityRecord> {
+  final String id;
+  final String type;
+  final String pianoId;
+  final String? tuningId;
+  final String? reminderId;
+  final String? previousDate;
+  final String? newDate;
+  final DateTime occurredAt;
+  const ActivityRecord({
+    required this.id,
+    required this.type,
+    required this.pianoId,
+    this.tuningId,
+    this.reminderId,
+    this.previousDate,
+    this.newDate,
+    required this.occurredAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['type'] = Variable<String>(type);
+    map['piano_id'] = Variable<String>(pianoId);
+    if (!nullToAbsent || tuningId != null) {
+      map['tuning_id'] = Variable<String>(tuningId);
+    }
+    if (!nullToAbsent || reminderId != null) {
+      map['reminder_id'] = Variable<String>(reminderId);
+    }
+    if (!nullToAbsent || previousDate != null) {
+      map['previous_date'] = Variable<String>(previousDate);
+    }
+    if (!nullToAbsent || newDate != null) {
+      map['new_date'] = Variable<String>(newDate);
+    }
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    return map;
+  }
+
+  ActivitiesCompanion toCompanion(bool nullToAbsent) {
+    return ActivitiesCompanion(
+      id: Value(id),
+      type: Value(type),
+      pianoId: Value(pianoId),
+      tuningId: tuningId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(tuningId),
+      reminderId: reminderId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reminderId),
+      previousDate: previousDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(previousDate),
+      newDate: newDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(newDate),
+      occurredAt: Value(occurredAt),
+    );
+  }
+
+  factory ActivityRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ActivityRecord(
+      id: serializer.fromJson<String>(json['id']),
+      type: serializer.fromJson<String>(json['type']),
+      pianoId: serializer.fromJson<String>(json['pianoId']),
+      tuningId: serializer.fromJson<String?>(json['tuningId']),
+      reminderId: serializer.fromJson<String?>(json['reminderId']),
+      previousDate: serializer.fromJson<String?>(json['previousDate']),
+      newDate: serializer.fromJson<String?>(json['newDate']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'type': serializer.toJson<String>(type),
+      'pianoId': serializer.toJson<String>(pianoId),
+      'tuningId': serializer.toJson<String?>(tuningId),
+      'reminderId': serializer.toJson<String?>(reminderId),
+      'previousDate': serializer.toJson<String?>(previousDate),
+      'newDate': serializer.toJson<String?>(newDate),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+    };
+  }
+
+  ActivityRecord copyWith({
+    String? id,
+    String? type,
+    String? pianoId,
+    Value<String?> tuningId = const Value.absent(),
+    Value<String?> reminderId = const Value.absent(),
+    Value<String?> previousDate = const Value.absent(),
+    Value<String?> newDate = const Value.absent(),
+    DateTime? occurredAt,
+  }) => ActivityRecord(
+    id: id ?? this.id,
+    type: type ?? this.type,
+    pianoId: pianoId ?? this.pianoId,
+    tuningId: tuningId.present ? tuningId.value : this.tuningId,
+    reminderId: reminderId.present ? reminderId.value : this.reminderId,
+    previousDate: previousDate.present ? previousDate.value : this.previousDate,
+    newDate: newDate.present ? newDate.value : this.newDate,
+    occurredAt: occurredAt ?? this.occurredAt,
+  );
+  ActivityRecord copyWithCompanion(ActivitiesCompanion data) {
+    return ActivityRecord(
+      id: data.id.present ? data.id.value : this.id,
+      type: data.type.present ? data.type.value : this.type,
+      pianoId: data.pianoId.present ? data.pianoId.value : this.pianoId,
+      tuningId: data.tuningId.present ? data.tuningId.value : this.tuningId,
+      reminderId: data.reminderId.present
+          ? data.reminderId.value
+          : this.reminderId,
+      previousDate: data.previousDate.present
+          ? data.previousDate.value
+          : this.previousDate,
+      newDate: data.newDate.present ? data.newDate.value : this.newDate,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ActivityRecord(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('pianoId: $pianoId, ')
+          ..write('tuningId: $tuningId, ')
+          ..write('reminderId: $reminderId, ')
+          ..write('previousDate: $previousDate, ')
+          ..write('newDate: $newDate, ')
+          ..write('occurredAt: $occurredAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    type,
+    pianoId,
+    tuningId,
+    reminderId,
+    previousDate,
+    newDate,
+    occurredAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ActivityRecord &&
+          other.id == this.id &&
+          other.type == this.type &&
+          other.pianoId == this.pianoId &&
+          other.tuningId == this.tuningId &&
+          other.reminderId == this.reminderId &&
+          other.previousDate == this.previousDate &&
+          other.newDate == this.newDate &&
+          other.occurredAt == this.occurredAt);
+}
+
+class ActivitiesCompanion extends UpdateCompanion<ActivityRecord> {
+  final Value<String> id;
+  final Value<String> type;
+  final Value<String> pianoId;
+  final Value<String?> tuningId;
+  final Value<String?> reminderId;
+  final Value<String?> previousDate;
+  final Value<String?> newDate;
+  final Value<DateTime> occurredAt;
+  final Value<int> rowid;
+  const ActivitiesCompanion({
+    this.id = const Value.absent(),
+    this.type = const Value.absent(),
+    this.pianoId = const Value.absent(),
+    this.tuningId = const Value.absent(),
+    this.reminderId = const Value.absent(),
+    this.previousDate = const Value.absent(),
+    this.newDate = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ActivitiesCompanion.insert({
+    required String id,
+    required String type,
+    required String pianoId,
+    this.tuningId = const Value.absent(),
+    this.reminderId = const Value.absent(),
+    this.previousDate = const Value.absent(),
+    this.newDate = const Value.absent(),
+    required DateTime occurredAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       type = Value(type),
+       pianoId = Value(pianoId),
+       occurredAt = Value(occurredAt);
+  static Insertable<ActivityRecord> custom({
+    Expression<String>? id,
+    Expression<String>? type,
+    Expression<String>? pianoId,
+    Expression<String>? tuningId,
+    Expression<String>? reminderId,
+    Expression<String>? previousDate,
+    Expression<String>? newDate,
+    Expression<DateTime>? occurredAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (type != null) 'type': type,
+      if (pianoId != null) 'piano_id': pianoId,
+      if (tuningId != null) 'tuning_id': tuningId,
+      if (reminderId != null) 'reminder_id': reminderId,
+      if (previousDate != null) 'previous_date': previousDate,
+      if (newDate != null) 'new_date': newDate,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ActivitiesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? type,
+    Value<String>? pianoId,
+    Value<String?>? tuningId,
+    Value<String?>? reminderId,
+    Value<String?>? previousDate,
+    Value<String?>? newDate,
+    Value<DateTime>? occurredAt,
+    Value<int>? rowid,
+  }) {
+    return ActivitiesCompanion(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      pianoId: pianoId ?? this.pianoId,
+      tuningId: tuningId ?? this.tuningId,
+      reminderId: reminderId ?? this.reminderId,
+      previousDate: previousDate ?? this.previousDate,
+      newDate: newDate ?? this.newDate,
+      occurredAt: occurredAt ?? this.occurredAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (pianoId.present) {
+      map['piano_id'] = Variable<String>(pianoId.value);
+    }
+    if (tuningId.present) {
+      map['tuning_id'] = Variable<String>(tuningId.value);
+    }
+    if (reminderId.present) {
+      map['reminder_id'] = Variable<String>(reminderId.value);
+    }
+    if (previousDate.present) {
+      map['previous_date'] = Variable<String>(previousDate.value);
+    }
+    if (newDate.present) {
+      map['new_date'] = Variable<String>(newDate.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ActivitiesCompanion(')
+          ..write('id: $id, ')
+          ..write('type: $type, ')
+          ..write('pianoId: $pianoId, ')
+          ..write('tuningId: $tuningId, ')
+          ..write('reminderId: $reminderId, ')
+          ..write('previousDate: $previousDate, ')
+          ..write('newDate: $newDate, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2601,6 +3133,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PianosTable pianos = $PianosTable(this);
   late final $TuningsTable tunings = $TuningsTable(this);
   late final $RemindersTable reminders = $RemindersTable(this);
+  late final $ActivitiesTable activities = $ActivitiesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2610,6 +3143,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     pianos,
     tunings,
     reminders,
+    activities,
   ];
 }
 
@@ -3135,6 +3669,24 @@ final class $$PianosTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$ActivitiesTable, List<ActivityRecord>>
+  _activitiesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.activities,
+    aliasName: 'pianos__id__activities__piano_id',
+  );
+
+  $$ActivitiesTableProcessedTableManager get activitiesRefs {
+    final manager = $$ActivitiesTableTableManager(
+      $_db,
+      $_db.activities,
+    ).filter((f) => f.pianoId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_activitiesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$PianosTableFilterComposer
@@ -3270,6 +3822,31 @@ class $$PianosTableFilterComposer
           }) => $$RemindersTableFilterComposer(
             $db: $db,
             $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> activitiesRefs(
+    Expression<bool> Function($$ActivitiesTableFilterComposer f) f,
+  ) {
+    final $$ActivitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.activities,
+      getReferencedColumn: (t) => t.pianoId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ActivitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.activities,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -3498,6 +4075,31 @@ class $$PianosTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> activitiesRefs<T extends Object>(
+    Expression<T> Function($$ActivitiesTableAnnotationComposer a) f,
+  ) {
+    final $$ActivitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.activities,
+      getReferencedColumn: (t) => t.pianoId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ActivitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.activities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$PianosTableTableManager
@@ -3517,6 +4119,7 @@ class $$PianosTableTableManager
             bool customerId,
             bool tuningsRefs,
             bool remindersRefs,
+            bool activitiesRefs,
           })
         > {
   $$PianosTableTableManager(_$AppDatabase db, $PianosTable table)
@@ -3607,12 +4210,14 @@ class $$PianosTableTableManager
                 customerId = false,
                 tuningsRefs = false,
                 remindersRefs = false,
+                activitiesRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
                   explicitlyWatchedTables: [
                     if (tuningsRefs) db.tunings,
                     if (remindersRefs) db.reminders,
+                    if (activitiesRefs) db.activities,
                   ],
                   addJoins:
                       <
@@ -3688,6 +4293,27 @@ class $$PianosTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (activitiesRefs)
+                        await $_getPrefetchedData<
+                          PianoRecord,
+                          $PianosTable,
+                          ActivityRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$PianosTableReferences
+                              ._activitiesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$PianosTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).activitiesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.pianoId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -3712,6 +4338,7 @@ typedef $$PianosTableProcessedTableManager =
         bool customerId,
         bool tuningsRefs,
         bool remindersRefs,
+        bool activitiesRefs,
       })
     >;
 typedef $$TuningsTableCreateCompanionBuilder = TuningsCompanion Function({
@@ -3767,6 +4394,24 @@ final class $$TuningsTableReferences
     ).filter((f) => f.originTuningId.id.sqlEquals($_itemColumn<String>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_remindersRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ActivitiesTable, List<ActivityRecord>>
+  _activitiesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.activities,
+    aliasName: 'tunings__id__activities__tuning_id',
+  );
+
+  $$ActivitiesTableProcessedTableManager get activitiesRefs {
+    final manager = $$ActivitiesTableTableManager(
+      $_db,
+      $_db.activities,
+    ).filter((f) => f.tuningId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_activitiesRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -3846,6 +4491,31 @@ class $$TuningsTableFilterComposer
           }) => $$RemindersTableFilterComposer(
             $db: $db,
             $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> activitiesRefs(
+    Expression<bool> Function($$ActivitiesTableFilterComposer f) f,
+  ) {
+    final $$ActivitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.activities,
+      getReferencedColumn: (t) => t.tuningId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ActivitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.activities,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -3987,6 +4657,31 @@ class $$TuningsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> activitiesRefs<T extends Object>(
+    Expression<T> Function($$ActivitiesTableAnnotationComposer a) f,
+  ) {
+    final $$ActivitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.activities,
+      getReferencedColumn: (t) => t.tuningId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ActivitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.activities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$TuningsTableTableManager
@@ -4002,7 +4697,11 @@ class $$TuningsTableTableManager
           $$TuningsTableUpdateCompanionBuilder,
           (TuningRecord, $$TuningsTableReferences),
           TuningRecord,
-          PrefetchHooks Function({bool pianoId, bool remindersRefs})
+          PrefetchHooks Function({
+            bool pianoId,
+            bool remindersRefs,
+            bool activitiesRefs,
+          })
         > {
   $$TuningsTableTableManager(_$AppDatabase db, $TuningsTable table)
     : super(
@@ -4059,64 +4758,96 @@ class $$TuningsTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({pianoId = false, remindersRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (remindersRefs) db.reminders],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (pianoId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.pianoId,
-                        referencedTable: $$TuningsTableReferences._pianoIdTable(
-                          db,
-                        ),
-                        referencedColumn: $$TuningsTableReferences
-                            ._pianoIdTable(db)
-                            .id,
-                      ) as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                pianoId = false,
+                remindersRefs = false,
+                activitiesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (remindersRefs) db.reminders,
+                    if (activitiesRefs) db.activities,
+                  ],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (pianoId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.pianoId,
+                            referencedTable: $$TuningsTableReferences
+                                ._pianoIdTable(db),
+                            referencedColumn: $$TuningsTableReferences
+                                ._pianoIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (remindersRefs)
+                        await $_getPrefetchedData<
+                          TuningRecord,
+                          $TuningsTable,
+                          ReminderRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TuningsTableReferences
+                              ._remindersRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TuningsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).remindersRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.originTuningId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (activitiesRefs)
+                        await $_getPrefetchedData<
+                          TuningRecord,
+                          $TuningsTable,
+                          ActivityRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$TuningsTableReferences
+                              ._activitiesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$TuningsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).activitiesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.tuningId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (remindersRefs)
-                    await $_getPrefetchedData<
-                      TuningRecord,
-                      $TuningsTable,
-                      ReminderRecord
-                    >(
-                      currentTable: table,
-                      referencedTable: $$TuningsTableReferences
-                          ._remindersRefsTable(db),
-                      managerFromTypedResult: (p0) =>
-                          $$TuningsTableReferences(db, table, p0).remindersRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where(
-                            (e) => e.originTuningId == item.id,
-                          ),
-                      typedResults: items,
-                    ),
-                ];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -4133,7 +4864,11 @@ typedef $$TuningsTableProcessedTableManager =
       $$TuningsTableUpdateCompanionBuilder,
       (TuningRecord, $$TuningsTableReferences),
       TuningRecord,
-      PrefetchHooks Function({bool pianoId, bool remindersRefs})
+      PrefetchHooks Function({
+        bool pianoId,
+        bool remindersRefs,
+        bool activitiesRefs,
+      })
     >;
 typedef $$RemindersTableCreateCompanionBuilder = RemindersCompanion Function({
   required String id,
@@ -4199,6 +4934,24 @@ final class $$RemindersTableReferences
     if (item == null) return manager;
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static MultiTypedResultKey<$ActivitiesTable, List<ActivityRecord>>
+  _activitiesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.activities,
+    aliasName: 'reminders__id__activities__reminder_id',
+  );
+
+  $$ActivitiesTableProcessedTableManager get activitiesRefs {
+    final manager = $$ActivitiesTableTableManager(
+      $_db,
+      $_db.activities,
+    ).filter((f) => f.reminderId.id.sqlEquals($_itemColumn<String>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_activitiesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
     );
   }
 }
@@ -4301,6 +5054,31 @@ class $$RemindersTableFilterComposer
           ),
     );
     return composer;
+  }
+
+  Expression<bool> activitiesRefs(
+    Expression<bool> Function($$ActivitiesTableFilterComposer f) f,
+  ) {
+    final $$ActivitiesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.activities,
+      getReferencedColumn: (t) => t.reminderId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ActivitiesTableFilterComposer(
+            $db: $db,
+            $table: $db.activities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
   }
 }
 
@@ -4492,6 +5270,31 @@ class $$RemindersTableAnnotationComposer
     );
     return composer;
   }
+
+  Expression<T> activitiesRefs<T extends Object>(
+    Expression<T> Function($$ActivitiesTableAnnotationComposer a) f,
+  ) {
+    final $$ActivitiesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.activities,
+      getReferencedColumn: (t) => t.reminderId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ActivitiesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.activities,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$RemindersTableTableManager
@@ -4507,7 +5310,11 @@ class $$RemindersTableTableManager
           $$RemindersTableUpdateCompanionBuilder,
           (ReminderRecord, $$RemindersTableReferences),
           ReminderRecord,
-          PrefetchHooks Function({bool pianoId, bool originTuningId})
+          PrefetchHooks Function({
+            bool pianoId,
+            bool originTuningId,
+            bool activitiesRefs,
+          })
         > {
   $$RemindersTableTableManager(_$AppDatabase db, $RemindersTable table)
     : super(
@@ -4584,56 +5391,83 @@ class $$RemindersTableTableManager
                 ),
               )
               .toList(),
-          prefetchHooksCallback: ({pianoId = false, originTuningId = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [],
-              addJoins:
-                  <
-                    T extends TableManagerState<
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic,
-                      dynamic
-                    >
-                  >(state) {
-                    if (pianoId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.pianoId,
-                        referencedTable: $$RemindersTableReferences
-                            ._pianoIdTable(db),
-                        referencedColumn: $$RemindersTableReferences
-                            ._pianoIdTable(db)
-                            .id,
-                      ) as T;
-                    }
-                    if (originTuningId) {
-                      state = state.withJoin(
-                        currentTable: table,
-                        currentColumn: table.originTuningId,
-                        referencedTable: $$RemindersTableReferences
-                            ._originTuningIdTable(db),
-                        referencedColumn: $$RemindersTableReferences
-                            ._originTuningIdTable(db)
-                            .id,
-                      ) as T;
-                    }
+          prefetchHooksCallback:
+              ({
+                pianoId = false,
+                originTuningId = false,
+                activitiesRefs = false,
+              }) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [if (activitiesRefs) db.activities],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (pianoId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.pianoId,
+                            referencedTable: $$RemindersTableReferences
+                                ._pianoIdTable(db),
+                            referencedColumn: $$RemindersTableReferences
+                                ._pianoIdTable(db)
+                                .id,
+                          ) as T;
+                        }
+                        if (originTuningId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.originTuningId,
+                            referencedTable: $$RemindersTableReferences
+                                ._originTuningIdTable(db),
+                            referencedColumn: $$RemindersTableReferences
+                                ._originTuningIdTable(db)
+                                .id,
+                          ) as T;
+                        }
 
-                    return state;
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (activitiesRefs)
+                        await $_getPrefetchedData<
+                          ReminderRecord,
+                          $RemindersTable,
+                          ActivityRecord
+                        >(
+                          currentTable: table,
+                          referencedTable: $$RemindersTableReferences
+                              ._activitiesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$RemindersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).activitiesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.reminderId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
                   },
-              getPrefetchedDataCallback: (items) async {
-                return [];
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -4650,7 +5484,554 @@ typedef $$RemindersTableProcessedTableManager =
       $$RemindersTableUpdateCompanionBuilder,
       (ReminderRecord, $$RemindersTableReferences),
       ReminderRecord,
-      PrefetchHooks Function({bool pianoId, bool originTuningId})
+      PrefetchHooks Function({
+        bool pianoId,
+        bool originTuningId,
+        bool activitiesRefs,
+      })
+    >;
+typedef $$ActivitiesTableCreateCompanionBuilder = ActivitiesCompanion Function({
+  required String id,
+  required String type,
+  required String pianoId,
+  Value<String?> tuningId,
+  Value<String?> reminderId,
+  Value<String?> previousDate,
+  Value<String?> newDate,
+  required DateTime occurredAt,
+  Value<int> rowid,
+});
+typedef $$ActivitiesTableUpdateCompanionBuilder = ActivitiesCompanion Function({
+  Value<String> id,
+  Value<String> type,
+  Value<String> pianoId,
+  Value<String?> tuningId,
+  Value<String?> reminderId,
+  Value<String?> previousDate,
+  Value<String?> newDate,
+  Value<DateTime> occurredAt,
+  Value<int> rowid,
+});
+
+final class $$ActivitiesTableReferences
+    extends BaseReferences<_$AppDatabase, $ActivitiesTable, ActivityRecord> {
+  $$ActivitiesTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $PianosTable _pianoIdTable(_$AppDatabase db) =>
+      db.pianos.createAlias('activities__piano_id__pianos__id');
+
+  $$PianosTableProcessedTableManager get pianoId {
+    final $_column = $_itemColumn<String>('piano_id')!;
+
+    final manager = $$PianosTableTableManager(
+      $_db,
+      $_db.pianos,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_pianoIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $TuningsTable _tuningIdTable(_$AppDatabase db) =>
+      db.tunings.createAlias('activities__tuning_id__tunings__id');
+
+  $$TuningsTableProcessedTableManager? get tuningId {
+    final $_column = $_itemColumn<String>('tuning_id');
+    if ($_column == null) return null;
+    final manager = $$TuningsTableTableManager(
+      $_db,
+      $_db.tunings,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_tuningIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $RemindersTable _reminderIdTable(_$AppDatabase db) =>
+      db.reminders.createAlias('activities__reminder_id__reminders__id');
+
+  $$RemindersTableProcessedTableManager? get reminderId {
+    final $_column = $_itemColumn<String>('reminder_id');
+    if ($_column == null) return null;
+    final manager = $$RemindersTableTableManager(
+      $_db,
+      $_db.reminders,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_reminderIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ActivitiesTableFilterComposer
+    extends Composer<_$AppDatabase, $ActivitiesTable> {
+  $$ActivitiesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get previousDate => $composableBuilder(
+    column: $table.previousDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get newDate => $composableBuilder(
+    column: $table.newDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$PianosTableFilterComposer get pianoId {
+    final $$PianosTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableFilterComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TuningsTableFilterComposer get tuningId {
+    final $$TuningsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tuningId,
+      referencedTable: $db.tunings,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TuningsTableFilterComposer(
+            $db: $db,
+            $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RemindersTableFilterComposer get reminderId {
+    final $$RemindersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reminderId,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableFilterComposer(
+            $db: $db,
+            $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ActivitiesTableOrderingComposer
+    extends Composer<_$AppDatabase, $ActivitiesTable> {
+  $$ActivitiesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get previousDate => $composableBuilder(
+    column: $table.previousDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get newDate => $composableBuilder(
+    column: $table.newDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$PianosTableOrderingComposer get pianoId {
+    final $$PianosTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableOrderingComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TuningsTableOrderingComposer get tuningId {
+    final $$TuningsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tuningId,
+      referencedTable: $db.tunings,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TuningsTableOrderingComposer(
+            $db: $db,
+            $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RemindersTableOrderingComposer get reminderId {
+    final $$RemindersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reminderId,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableOrderingComposer(
+            $db: $db,
+            $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ActivitiesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ActivitiesTable> {
+  $$ActivitiesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get previousDate => $composableBuilder(
+    column: $table.previousDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get newDate =>
+      $composableBuilder(column: $table.newDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+
+  $$PianosTableAnnotationComposer get pianoId {
+    final $$PianosTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.pianoId,
+      referencedTable: $db.pianos,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PianosTableAnnotationComposer(
+            $db: $db,
+            $table: $db.pianos,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$TuningsTableAnnotationComposer get tuningId {
+    final $$TuningsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.tuningId,
+      referencedTable: $db.tunings,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$TuningsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.tunings,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$RemindersTableAnnotationComposer get reminderId {
+    final $$RemindersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.reminderId,
+      referencedTable: $db.reminders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$RemindersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.reminders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ActivitiesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ActivitiesTable,
+          ActivityRecord,
+          $$ActivitiesTableFilterComposer,
+          $$ActivitiesTableOrderingComposer,
+          $$ActivitiesTableAnnotationComposer,
+          $$ActivitiesTableCreateCompanionBuilder,
+          $$ActivitiesTableUpdateCompanionBuilder,
+          (ActivityRecord, $$ActivitiesTableReferences),
+          ActivityRecord,
+          PrefetchHooks Function({bool pianoId, bool tuningId, bool reminderId})
+        > {
+  $$ActivitiesTableTableManager(_$AppDatabase db, $ActivitiesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ActivitiesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ActivitiesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ActivitiesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<String> pianoId = const Value.absent(),
+                Value<String?> tuningId = const Value.absent(),
+                Value<String?> reminderId = const Value.absent(),
+                Value<String?> previousDate = const Value.absent(),
+                Value<String?> newDate = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ActivitiesCompanion(
+                id: id,
+                type: type,
+                pianoId: pianoId,
+                tuningId: tuningId,
+                reminderId: reminderId,
+                previousDate: previousDate,
+                newDate: newDate,
+                occurredAt: occurredAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String type,
+                required String pianoId,
+                Value<String?> tuningId = const Value.absent(),
+                Value<String?> reminderId = const Value.absent(),
+                Value<String?> previousDate = const Value.absent(),
+                Value<String?> newDate = const Value.absent(),
+                required DateTime occurredAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ActivitiesCompanion.insert(
+                id: id,
+                type: type,
+                pianoId: pianoId,
+                tuningId: tuningId,
+                reminderId: reminderId,
+                previousDate: previousDate,
+                newDate: newDate,
+                occurredAt: occurredAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ActivitiesTable, ActivityRecord>(table),
+                  $$ActivitiesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({pianoId = false, tuningId = false, reminderId = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [],
+                  addJoins:
+                      <
+                        T extends TableManagerState<
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic,
+                          dynamic
+                        >
+                      >(state) {
+                        if (pianoId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.pianoId,
+                            referencedTable: $$ActivitiesTableReferences
+                                ._pianoIdTable(db),
+                            referencedColumn: $$ActivitiesTableReferences
+                                ._pianoIdTable(db)
+                                .id,
+                          ) as T;
+                        }
+                        if (tuningId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.tuningId,
+                            referencedTable: $$ActivitiesTableReferences
+                                ._tuningIdTable(db),
+                            referencedColumn: $$ActivitiesTableReferences
+                                ._tuningIdTable(db)
+                                .id,
+                          ) as T;
+                        }
+                        if (reminderId) {
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.reminderId,
+                            referencedTable: $$ActivitiesTableReferences
+                                ._reminderIdTable(db),
+                            referencedColumn: $$ActivitiesTableReferences
+                                ._reminderIdTable(db)
+                                .id,
+                          ) as T;
+                        }
+
+                        return state;
+                      },
+                  getPrefetchedDataCallback: (items) async {
+                    return [];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$ActivitiesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ActivitiesTable,
+      ActivityRecord,
+      $$ActivitiesTableFilterComposer,
+      $$ActivitiesTableOrderingComposer,
+      $$ActivitiesTableAnnotationComposer,
+      $$ActivitiesTableCreateCompanionBuilder,
+      $$ActivitiesTableUpdateCompanionBuilder,
+      (ActivityRecord, $$ActivitiesTableReferences),
+      ActivityRecord,
+      PrefetchHooks Function({bool pianoId, bool tuningId, bool reminderId})
     >;
 
 class $AppDatabaseManager {
@@ -4664,4 +6045,6 @@ class $AppDatabaseManager {
       $$TuningsTableTableManager(_db, _db.tunings);
   $$RemindersTableTableManager get reminders =>
       $$RemindersTableTableManager(_db, _db.reminders);
+  $$ActivitiesTableTableManager get activities =>
+      $$ActivitiesTableTableManager(_db, _db.activities);
 }

@@ -1,3 +1,5 @@
+import '../../domain/activity/activity.dart';
+import '../../domain/activity/activity_repository.dart';
 import '../../domain/clock.dart';
 import '../../domain/customer/civility.dart';
 import '../../domain/customer/customer.dart';
@@ -16,6 +18,7 @@ final class CustomerService {
     required this._repository,
     required this._pianos,
     required this._reminders,
+    required this._activities,
   });
 
   final Clock _clock;
@@ -24,6 +27,7 @@ final class CustomerService {
   final CustomerRepository _repository;
   final PianoRepository _pianos;
   final ReminderRepository _reminders;
+  final ActivityRepository _activities;
 
   Future<Customer> create({
     Civility? civility,
@@ -103,6 +107,13 @@ final class CustomerService {
       for (final piano in pianos) {
         if (piano.remindersEnabled) {
           await _pianos.update(piano.disableReminders(now));
+          await _activities.insert(
+            Activity.reminderDisabled(
+              id: ActivityId(_idGenerator.next()),
+              pianoId: piano.id,
+              now: now,
+            ),
+          );
         }
         final scheduled = await _reminders.findScheduledByPianoId(piano.id);
         if (scheduled != null) {

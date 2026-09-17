@@ -8,6 +8,7 @@ import '../application/reminder/reminder_service.dart';
 import '../application/tuning/correct_tuning.dart';
 import '../application/tuning/record_tuning.dart';
 import '../application/tuning/tuning_service.dart';
+import '../domain/activity/activity_repository.dart';
 import '../domain/clock.dart';
 import '../domain/customer/customer_repository.dart';
 import '../domain/piano/piano_repository.dart';
@@ -15,6 +16,7 @@ import '../domain/reminder/reminder_repository.dart';
 import '../domain/tuning/tuning_repository.dart';
 import '../infrastructure/ids/uuid_id_generator.dart';
 import '../infrastructure/persistence/app_database.dart';
+import '../infrastructure/persistence/drift_activity_repository.dart';
 import '../infrastructure/persistence/drift_customer_repository.dart';
 import '../infrastructure/persistence/drift_piano_repository.dart';
 import '../infrastructure/persistence/drift_reminder_repository.dart';
@@ -42,6 +44,10 @@ final transactionRunnerProvider = Provider<TransactionRunner>((ref) {
   return DriftTransactionRunner(ref.watch(appDatabaseProvider));
 });
 
+final activityRepositoryProvider = Provider<ActivityRepository>((ref) {
+  return DriftActivityRepository(ref.watch(appDatabaseProvider));
+});
+
 final customerRepositoryProvider = Provider<CustomerRepository>((ref) {
   return DriftCustomerRepository(ref.watch(appDatabaseProvider));
 });
@@ -54,6 +60,7 @@ final customerServiceProvider = Provider<CustomerService>((ref) {
     repository: ref.watch(customerRepositoryProvider),
     pianos: ref.watch(pianoRepositoryProvider),
     reminders: ref.watch(reminderRepositoryProvider),
+    activities: ref.watch(activityRepositoryProvider),
   );
 });
 
@@ -69,6 +76,7 @@ final pianoServiceProvider = Provider<PianoService>((ref) {
     pianos: ref.watch(pianoRepositoryProvider),
     customers: ref.watch(customerRepositoryProvider),
     reminders: ref.watch(reminderRepositoryProvider),
+    activities: ref.watch(activityRepositoryProvider),
   );
 });
 
@@ -87,7 +95,10 @@ final reminderRepositoryProvider = Provider<ReminderRepository>((ref) {
 final reminderServiceProvider = Provider<ReminderService>((ref) {
   return ReminderService(
     clock: ref.watch(clockProvider),
+    idGenerator: ref.watch(idGeneratorProvider),
+    transactions: ref.watch(transactionRunnerProvider),
     reminders: ref.watch(reminderRepositoryProvider),
+    activities: ref.watch(activityRepositoryProvider),
   );
 });
 
@@ -99,15 +110,18 @@ final recordTuningProvider = Provider<RecordTuning>((ref) {
     tunings: ref.watch(tuningRepositoryProvider),
     pianos: ref.watch(pianoRepositoryProvider),
     reminders: ref.watch(reminderRepositoryProvider),
+    activities: ref.watch(activityRepositoryProvider),
   );
 });
 
 final correctTuningProvider = Provider<CorrectTuning>((ref) {
   return CorrectTuning(
     clock: ref.watch(clockProvider),
+    idGenerator: ref.watch(idGeneratorProvider),
     transactions: ref.watch(transactionRunnerProvider),
     tunings: ref.watch(tuningRepositoryProvider),
     pianos: ref.watch(pianoRepositoryProvider),
     reminders: ref.watch(reminderRepositoryProvider),
+    activities: ref.watch(activityRepositoryProvider),
   );
 });

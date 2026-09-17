@@ -2,6 +2,7 @@ import 'package:accord_memo/application/ports/transaction_runner.dart';
 import 'package:accord_memo/application/tuning/correct_tuning.dart';
 import 'package:accord_memo/application/tuning/record_tuning.dart';
 import 'package:accord_memo/application/tuning/tuning_service.dart';
+import 'package:accord_memo/domain/activity/activity_type.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/piano/piano.dart';
 import 'package:accord_memo/domain/reminder/reminder_cancellation_reason.dart';
@@ -12,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_id_generator.dart';
 import '../support/fixed_clock.dart';
+import '../support/in_memory_activity_repository.dart';
 import '../support/in_memory_piano_repository.dart';
 import '../support/in_memory_reminder_repository.dart';
 import '../support/in_memory_tuning_repository.dart';
@@ -30,6 +32,7 @@ void main() {
   late InMemoryPianoRepository pianos;
   late InMemoryTuningRepository tunings;
   late InMemoryReminderRepository reminders;
+  late InMemoryActivityRepository activities;
   late _CountingTransactionRunner transactions;
   late RecordTuning recordTuning;
   late CorrectTuning correctTuning;
@@ -40,6 +43,7 @@ void main() {
     pianos = InMemoryPianoRepository();
     tunings = InMemoryTuningRepository();
     reminders = InMemoryReminderRepository();
+    activities = InMemoryActivityRepository(pianos);
     transactions = _CountingTransactionRunner();
     recordTuning = RecordTuning(
       clock: FixedClock(now),
@@ -48,18 +52,22 @@ void main() {
         'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
         'ffffffff-ffff-4fff-8fff-ffffffffffff',
         '99999999-9999-4999-8999-999999999999',
+        ...spareIds(),
       ]),
       transactions: transactions,
       tunings: tunings,
       pianos: pianos,
       reminders: reminders,
+      activities: activities,
     );
     correctTuning = CorrectTuning(
       clock: FixedClock(now),
+      idGenerator: FakeIdGenerator(spareIds()),
       transactions: transactions,
       tunings: tunings,
       pianos: pianos,
       reminders: reminders,
+      activities: activities,
     );
     tuningService = TuningService(tunings: tunings);
   });
@@ -75,7 +83,7 @@ void main() {
     return piano;
   }
 
-  test('notes seulement : Reminder inchangé, pas de transaction extra', () async {
+  test('notes seulement : tuningUpdated sans dates, dans une transaction', () async {
     final piano = await insertPiano();
     final tuning = await recordTuning.execute(
       pianoId: piano.id,
@@ -92,13 +100,19 @@ void main() {
 
     expect(corrected.notes, 'diapason 440');
     expect(corrected.tuningDate, CalendarDate(2026, 1, 5));
-    expect(transactions.calls, callsAfterCreate);
+    expect(transactions.calls, callsAfterCreate + 1);
     final after = await reminders.findScheduledByPianoId(piano.id);
     expect(after!.dueDate, before!.dueDate);
     expect(after.updatedAt, before.updatedAt);
+
+    final updates = (await activities.findByPianoId(pianoId: piano.id, limit: 10))
+        .where((item) => item.type == ActivityType.tuningUpdated);
+    expect(updates, hasLength(1));
+    expect(updates.single.previousDate, isNull);
+    expect(updates.single.newDate, isNull);
   });
 
-  test('date changée + automatique → recalcul dans une transaction', () async {
+  test('date changée + automatique → recalcul et Activity avec dates', () async {
     final piano = await insertPiano();
     final tuning = await recordTuning.execute(
       pianoId: piano.id,
@@ -117,6 +131,11 @@ void main() {
     final reminder = await reminders.findScheduledByPianoId(piano.id);
     expect(reminder!.dueDate, CalendarDate(2026, 6, 1));
     expect(reminder.manuallyRescheduled, isFalse);
+
+    final update = (await activities.findByPianoId(pianoId: piano.id, limit: 10))
+        .firstWhere((item) => item.type == ActivityType.tuningUpdated);
+    expect(update.previousDate, CalendarDate(2026, 1, 5));
+    expect(update.newDate, CalendarDate(2025, 6, 1));
   });
 
   test('date changée + manuel → dueDate conservée', () async {

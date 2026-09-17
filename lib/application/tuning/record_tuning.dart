@@ -1,3 +1,5 @@
+import '../../domain/activity/activity.dart';
+import '../../domain/activity/activity_repository.dart';
 import '../../domain/clock.dart';
 import '../../domain/piano/piano.dart';
 import '../../domain/piano/piano_repository.dart';
@@ -18,6 +20,7 @@ final class RecordTuning {
     required this._tunings,
     required this._pianos,
     required this._reminders,
+    required this._activities,
   });
 
   final Clock _clock;
@@ -26,6 +29,7 @@ final class RecordTuning {
   final TuningRepository _tunings;
   final PianoRepository _pianos;
   final ReminderRepository _reminders;
+  final ActivityRepository _activities;
 
   Future<Tuning> execute({
     required PianoId pianoId,
@@ -66,6 +70,15 @@ final class RecordTuning {
         );
         await _reminders.insert(reminder);
       }
+
+      await _activities.insert(
+        Activity.tuningCreated(
+          id: ActivityId(_idGenerator.next()),
+          pianoId: piano.id,
+          tuningId: tuning.id,
+          now: now,
+        ),
+      );
 
       return tuning;
     });

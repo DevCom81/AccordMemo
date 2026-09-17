@@ -1,3 +1,5 @@
+import '../../domain/activity/activity.dart';
+import '../../domain/activity/activity_repository.dart';
 import '../../domain/clock.dart';
 import '../../domain/customer/customer.dart';
 import '../../domain/customer/customer_repository.dart';
@@ -17,6 +19,7 @@ final class PianoService {
     required this._pianos,
     required this._customers,
     required this._reminders,
+    required this._activities,
   });
 
   final Clock _clock;
@@ -25,6 +28,7 @@ final class PianoService {
   final PianoRepository _pianos;
   final CustomerRepository _customers;
   final ReminderRepository _reminders;
+  final ActivityRepository _activities;
 
   Future<Piano> create({
     required CustomerId customerId,
@@ -85,18 +89,37 @@ final class PianoService {
       now: now,
     );
     final disabling = existing.remindersEnabled && !remindersEnabled;
-    if (!disabling) {
+    final enabling = !existing.remindersEnabled && remindersEnabled;
+    if (!disabling && !enabling) {
       await _pianos.update(updated);
       return updated;
     }
 
     return _transactions.run(() async {
       await _pianos.update(updated);
-      await _cancelScheduled(
-        pianoId: id,
-        reason: ReminderCancellationReason.remindersDisabled,
-        now: now,
-      );
+      if (disabling) {
+        await _cancelScheduled(
+          pianoId: id,
+          reason: ReminderCancellationReason.remindersDisabled,
+          now: now,
+        );
+        await _activities.insert(
+          Activity.reminderDisabled(
+            id: ActivityId(_idGenerator.next()),
+            pianoId: id,
+            now: now,
+          ),
+        );
+      }
+      if (enabling) {
+        await _activities.insert(
+          Activity.reminderReenabled(
+            id: ActivityId(_idGenerator.next()),
+            pianoId: id,
+            now: now,
+          ),
+        );
+      }
       return updated;
     });
   }

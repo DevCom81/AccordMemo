@@ -1,4 +1,6 @@
 import 'package:accord_memo/application/reminder/reminder_service.dart';
+import 'package:accord_memo/application/ports/transaction_runner.dart';
+import 'package:accord_memo/domain/activity/activity_type.dart';
 import 'package:accord_memo/domain/piano/piano.dart';
 import 'package:accord_memo/domain/reminder/reminder.dart';
 import 'package:accord_memo/domain/reminder/reminder_cancellation_reason.dart';
@@ -7,19 +9,41 @@ import 'package:accord_memo/domain/shared/calendar_date.dart';
 import 'package:accord_memo/domain/tuning/tuning.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/fake_id_generator.dart';
 import '../support/fixed_clock.dart';
+import '../support/in_memory_activity_repository.dart';
+import '../support/in_memory_piano_repository.dart';
 import '../support/in_memory_reminder_repository.dart';
 
+final class _CountingTransactionRunner implements TransactionRunner {
+  var calls = 0;
+
+  @override
+  Future<T> run<T>(Future<T> Function() action) {
+    calls += 1;
+    return action();
+  }
+}
+
 void main() {
+  late InMemoryPianoRepository pianos;
   late InMemoryReminderRepository reminders;
+  late InMemoryActivityRepository activities;
+  late _CountingTransactionRunner transactions;
   late ReminderService service;
   final now = DateTime.utc(2026, 9, 17, 10);
 
   setUp(() {
+    pianos = InMemoryPianoRepository();
     reminders = InMemoryReminderRepository();
+    activities = InMemoryActivityRepository(pianos);
+    transactions = _CountingTransactionRunner();
     service = ReminderService(
       clock: FixedClock(now),
+      idGenerator: FakeIdGenerator(spareIds()),
+      transactions: transactions,
       reminders: reminders,
+      activities: activities,
     );
   });
 
@@ -66,11 +90,34 @@ void main() {
     );
   });
 
-  test('markSent et cancel', () async {
+  test('reschedule crée une Activity reminderRescheduled via TransactionRunner', () async {
     final created = await insertScheduled();
+    final callsBefore = transactions.calls;
+    await service.reschedule(
+      id: created.id,
+      newDueDate: CalendarDate(2026, 12, 1),
+    );
+
+    expect(transactions.calls, callsBefore + 1);
+    final journal = await activities.findRecent(limit: 10);
+    expect(journal, hasLength(1));
+    expect(journal.single.type, ActivityType.reminderRescheduled);
+    expect(journal.single.reminderId, created.id);
+    expect(journal.single.previousDate, CalendarDate(2027, 9, 17));
+    expect(journal.single.newDate, CalendarDate(2026, 12, 1));
+  });
+
+  test('markSent crée reminderSent, cancel ne crée aucune Activity', () async {
+    final created = await insertScheduled();
+    final callsBeforeSent = transactions.calls;
     final sent = await service.markSent(created.id);
     expect(sent.status, ReminderStatus.sent);
     expect(sent.sentAt, now);
+    expect(transactions.calls, callsBeforeSent + 1);
+
+    final sentJournal = await activities.findRecent(limit: 10);
+    expect(sentJournal, hasLength(1));
+    expect(sentJournal.single.type, ActivityType.reminderSent);
 
     final other = Reminder.schedule(
       id: ReminderId('reminder-2'),
@@ -80,6 +127,7 @@ void main() {
       now: now,
     );
     await reminders.insert(other);
+    final callsBeforeCancel = transactions.calls;
     final cancelled = await service.cancel(
       id: other.id,
       reason: ReminderCancellationReason.remindersDisabled,
@@ -90,6 +138,8 @@ void main() {
       ReminderCancellationReason.remindersDisabled,
     );
     expect(await service.findScheduledByPiano(PianoId('piano-1')), isNull);
+    expect(transactions.calls, callsBeforeCancel);
+    expect(await activities.findRecent(limit: 10), hasLength(1));
   });
 
   test('signale un reminder introuvable', () async {
