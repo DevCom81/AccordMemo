@@ -17,6 +17,8 @@ final class DashboardReminder {
     this.brand,
     this.model,
     this.type,
+    this.phone,
+    this.email,
   });
 
   final ReminderId reminderId;
@@ -29,4 +31,6 @@ final class DashboardReminder {
   final String? brand;
   final String? model;
   final PianoType? type;
+  final String? phone;
+  final String? email;
 }

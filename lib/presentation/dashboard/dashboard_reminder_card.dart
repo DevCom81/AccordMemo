@@ -57,6 +57,8 @@ class DashboardReminderCard extends StatelessWidget {
     final semanticsDetails = [
       piano,
       ?city,
+      if (DashboardReminderContacts.isPresent(reminder.phone)) reminder.phone!,
+      if (DashboardReminderContacts.isPresent(reminder.email)) reminder.email!,
     ].where((part) => part.isNotEmpty).join('. ');
 
     final avatar = _InitialsAvatar(
@@ -65,7 +67,13 @@ class DashboardReminderCard extends StatelessWidget {
         firstName: reminder.firstName,
       ),
     );
-    final identity = _IdentityColumn(name: name, piano: piano, city: city);
+    final identity = _IdentityColumn(
+      name: name,
+      piano: piano,
+      city: city,
+      phone: reminder.phone,
+      email: reminder.email,
+    );
     final due = _DueColumn(
       dateLabel: dueDateLabel,
       relativeLabel: dueRelative,
@@ -140,11 +148,15 @@ class _IdentityColumn extends StatelessWidget {
     required this.name,
     required this.piano,
     required this.city,
+    required this.phone,
+    required this.email,
   });
 
   final String name;
   final String piano;
   final String? city;
+  final String? phone;
+  final String? email;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +169,42 @@ class _IdentityColumn extends StatelessWidget {
           Text(piano, style: Theme.of(context).textTheme.bodyLarge),
         if (cityLabel != null)
           Text(cityLabel, style: Theme.of(context).textTheme.bodyMedium),
+        if (DashboardReminderContacts.isPresent(phone) ||
+            DashboardReminderContacts.isPresent(email))
+          DashboardReminderContacts(phone: phone, email: email),
       ],
+    );
+  }
+}
+
+class DashboardReminderContacts extends StatelessWidget {
+  const DashboardReminderContacts({
+    super.key,
+    this.phone,
+    this.email,
+  });
+
+  final String? phone;
+  final String? email;
+
+  static bool isPresent(String? value) =>
+      value != null && value.trim().isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Widget>[
+      if (isPresent(phone))
+        Text(phone!, style: Theme.of(context).textTheme.bodyMedium),
+      if (isPresent(email))
+        Text(email!, style: Theme.of(context).textTheme.bodyMedium),
+    ];
+    if (items.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Wrap(
+      spacing: 16,
+      runSpacing: 4,
+      children: items,
     );
   }
 }

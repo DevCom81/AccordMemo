@@ -12,6 +12,7 @@ import 'package:accord_memo/domain/shared/calendar_date.dart';
 import 'package:accord_memo/domain/tuning/tuning.dart';
 import 'package:accord_memo/presentation/app_providers.dart';
 import 'package:accord_memo/presentation/dashboard/dashboard_page.dart';
+import 'package:accord_memo/presentation/dashboard/dashboard_reminder_card.dart';
 import 'package:accord_memo/presentation/dashboard/dashboard_strings.dart';
 import 'package:accord_memo/presentation/history/history_providers.dart';
 import 'package:accord_memo/presentation/theme/app_theme.dart';
@@ -35,6 +36,8 @@ DashboardReminder _reminder({
   String? city = 'Toulouse',
   String? brand = 'Yamaha',
   String? model = 'U1',
+  String? phone,
+  String? email,
 }) {
   return DashboardReminder(
     reminderId: ReminderId(id),
@@ -46,6 +49,8 @@ DashboardReminder _reminder({
     city: city,
     brand: brand,
     model: model,
+    phone: phone,
+    email: email,
   );
 }
 
@@ -342,5 +347,203 @@ void main() {
     expect(historyLoads, 2);
     expect(dashboardLoads, 2);
     expect((await reminders.findById(reminder.id))!.dueDate, today);
+  });
+
+  testWidgets('affiche le téléphone quand il est renseigné', (tester) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            dueSoon: [
+              _reminder(dueDate: today.addDays(2), phone: '0612345678'),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('0612345678'), findsWidgets);
+    expect(find.text('Non renseigné'), findsNothing);
+  });
+
+  testWidgets('affiche l’email quand il est renseigné', (tester) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            dueSoon: [
+              _reminder(dueDate: today.addDays(2), email: 'jean@example.com'),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('jean@example.com'), findsWidgets);
+    expect(find.text('Non renseigné'), findsNothing);
+  });
+
+  testWidgets('affiche téléphone et email quand ils sont renseignés', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            dueSoon: [
+              _reminder(
+                dueDate: today.addDays(2),
+                phone: '0612345678',
+                email: 'jean@example.com',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('0612345678'), findsWidgets);
+    expect(find.text('jean@example.com'), findsWidgets);
+  });
+
+  testWidgets('n’affiche aucun placeholder sans coordonnées', (tester) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            dueSoon: [_reminder(dueDate: today.addDays(2))],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Non renseigné'), findsNothing);
+    expect(find.text('Téléphone'), findsNothing);
+    expect(find.text('Email'), findsNothing);
+  });
+
+  testWidgets('ignore téléphone et email vides ou seulement des espaces', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            dueSoon: [
+              _reminder(
+                dueDate: today.addDays(2),
+                phone: '   ',
+                email: ' ',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('   '), findsNothing);
+    expect(find.text(' '), findsNothing);
+    expect(find.text('Non renseigné'), findsNothing);
+  });
+
+  testWidgets('affiche les coordonnées dans la relance prioritaire', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            overdue: [
+              _reminder(
+                dueDate: today.addDays(-14),
+                phone: '0612345678',
+                email: 'jean@example.com',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text(dashboardHeroTitle.toUpperCase()), findsOneWidget);
+    expect(find.text('0612345678'), findsNWidgets(2));
+    expect(find.text('jean@example.com'), findsNWidgets(2));
+  });
+
+  testWidgets('n’overflow pas en largeur étroite avec téléphone et email', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: buildAppTheme(),
+        home: Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            width: 360,
+            child: DashboardReminderCard(
+              reminder: _reminder(
+                dueDate: today.addDays(-14),
+                phone: '06 12 34 56 78',
+                email: 'jean.dupont@exemple-long.fr',
+              ),
+              today: today,
+              bucket: DashboardReminderBucket.overdue,
+              onReschedule: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('06 12 34 56 78'), findsOneWidget);
+    expect(find.text('jean.dupont@exemple-long.fr'), findsOneWidget);
+  });
+
+  testWidgets('conserve Envoyer le rappel disabled avec des coordonnées', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            dueSoon: [
+              _reminder(
+                dueDate: today.addDays(2),
+                phone: '0612345678',
+                email: 'jean@example.com',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final send = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Envoyer le rappel'),
+    );
+    expect(send.onPressed, isNull);
   });
 }

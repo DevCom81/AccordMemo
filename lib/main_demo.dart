@@ -13,7 +13,7 @@ import 'infrastructure/persistence/drift_transaction_runner.dart';
 import 'infrastructure/persistence/drift_tuning_repository.dart';
 import 'infrastructure/time/system_clock.dart';
 import 'main.dart';
-import 'presentation/app_providers.dart';
+import 'presentation/app_database_holder.dart';
 import 'presentation/dev/demo_mode.dart';
 
 Future<void> main() async {
@@ -42,17 +42,13 @@ Future<void> main() async {
     await database.close();
     rethrow;
   }
+  await database.close();
 
   runApp(
     ProviderScope(
       overrides: [
-        appDatabaseProvider.overrideWith((ref) {
-          ref.onDispose(() {
-            database.close();
-          });
-          return database;
-        }),
         demoModeProvider.overrideWith((ref) => true),
+        appDatabaseOpenerProvider.overrideWith((ref) => openDemoAppDatabase),
       ],
       child: const AccordMemoApp(),
     ),

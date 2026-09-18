@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../application/backup/app_database_session.dart';
 import '../application/customer/customer_service.dart';
 import '../application/dashboard/dashboard_reminder_query.dart';
 import '../application/dashboard/dashboard_service.dart';
@@ -31,13 +32,13 @@ import '../infrastructure/persistence/drift_reminder_repository.dart';
 import '../infrastructure/persistence/drift_transaction_runner.dart';
 import '../infrastructure/persistence/drift_tuning_repository.dart';
 import '../infrastructure/time/system_clock.dart';
+import 'app_database_holder.dart';
 
-final appDatabaseProvider = Provider<AppDatabase>((ref) {
-  final database = openProductionAppDatabase();
-  ref.onDispose(() {
-    database.close();
-  });
-  return database;
+final appDatabaseProvider =
+    NotifierProvider<AppDatabaseHolder, AppDatabase>(AppDatabaseHolder.new);
+
+final appDatabaseSessionProvider = Provider<AppDatabaseSession>((ref) {
+  return ref.watch(appDatabaseProvider.notifier);
 });
 
 final clockProvider = Provider<Clock>((ref) {

@@ -58,6 +58,8 @@ final class DriftDashboardReminderQuery implements DashboardReminderQuery {
       brand: piano.brand,
       model: piano.model,
       type: piano.type == null ? null : PianoType.values.byName(piano.type!),
+      phone: customer.phone,
+      email: customer.email,
     );
   }
 }

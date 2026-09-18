@@ -6,9 +6,12 @@ import 'package:accord_memo/main.dart';
 import 'package:accord_memo/presentation/app_providers.dart';
 import 'package:accord_memo/presentation/clients/clients_providers.dart';
 import 'package:accord_memo/presentation/history/history_providers.dart';
+import 'package:accord_memo/presentation/settings/settings_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'support/fake_app_data_locator.dart';
 
 void main() {
   testWidgets('démarre AccordMémo sur le tableau de bord', (tester) async {
@@ -31,6 +34,9 @@ void main() {
           clientsSearchProvider.overrideWith((ref) async => <Customer>[]),
           historySnapshotProvider.overrideWith(
             (ref) async => const <HistoryEntry>[],
+          ),
+          appDataLocatorProvider.overrideWith(
+            (ref) => FakeAppDataLocator.displayOnly(),
           ),
         ],
         child: const AccordMemoApp(),

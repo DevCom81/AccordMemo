@@ -38,13 +38,18 @@ void main() {
 
   Future<Customer> insertCustomer({
     String id = '11111111-1111-4111-8111-111111111111',
+    String lastName = 'Dupont',
     bool archived = false,
+    String? phone,
+    String? email,
   }) async {
     var customer = Customer.create(
       id: CustomerId(id),
-      lastName: 'Dupont',
+      lastName: lastName,
       firstName: 'Jean',
       city: 'Toulouse',
+      phone: phone,
+      email: email,
       now: now,
     );
     if (archived) {
@@ -144,6 +149,8 @@ void main() {
     expect(found.single.lastName, 'Dupont');
     expect(found.single.firstName, 'Jean');
     expect(found.single.city, 'Toulouse');
+    expect(found.single.phone, isNull);
+    expect(found.single.email, isNull);
     expect(found.single.brand, 'Yamaha');
     expect(found.single.model, 'U1');
     expect(found.single.dueDate, today.addDays(2));
@@ -288,5 +295,94 @@ void main() {
       until: today.addDays(30),
     );
     expect(found.map((item) => item.reminderId.value), ['first', 'second']);
+  });
+
+  test('projette téléphone et email depuis la JOIN unique', () async {
+    Future<void> insertContactCase({
+      required String customerId,
+      required String pianoId,
+      required String tuningId,
+      required String reminderId,
+      required String lastName,
+      required CalendarDate dueDate,
+      String? phone,
+      String? email,
+    }) async {
+      final customer = await insertCustomer(
+        id: customerId,
+        lastName: lastName,
+        phone: phone,
+        email: email,
+      );
+      final piano = await insertPiano(
+        customerId: customer.id,
+        pianoId: pianoId,
+      );
+      final tuning = await insertTuning(pianoId: piano.id, id: tuningId);
+      await insertScheduled(
+        piano: piano,
+        tuning: tuning,
+        dueDate: dueDate,
+        id: reminderId,
+      );
+    }
+
+    await insertContactCase(
+      customerId: '11111111-1111-4111-8111-111111111111',
+      pianoId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      tuningId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      reminderId: 'both',
+      lastName: 'Both',
+      dueDate: today.addDays(1),
+      phone: '0612345678',
+      email: 'both@example.com',
+    );
+    await insertContactCase(
+      customerId: '22222222-2222-4222-8222-222222222222',
+      pianoId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      tuningId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      reminderId: 'phone',
+      lastName: 'PhoneOnly',
+      dueDate: today.addDays(2),
+      phone: '0600000000',
+    );
+    await insertContactCase(
+      customerId: '33333333-3333-4333-8333-333333333333',
+      pianoId: '44444444-4444-4444-8444-444444444444',
+      tuningId: '55555555-5555-4555-8555-555555555555',
+      reminderId: 'email',
+      lastName: 'EmailOnly',
+      dueDate: today.addDays(3),
+      email: 'email@example.com',
+    );
+    await insertContactCase(
+      customerId: '66666666-6666-4666-8666-666666666666',
+      pianoId: '77777777-7777-4777-8777-777777777777',
+      tuningId: '88888888-8888-4888-8888-888888888888',
+      reminderId: 'none',
+      lastName: 'Neither',
+      dueDate: today.addDays(4),
+    );
+
+    final found = await query.findScheduledDueOnOrBefore(
+      until: today.addDays(30),
+    );
+    expect(found, hasLength(4));
+    expect(
+      found.map(
+        (item) => (
+          item.reminderId.value,
+          item.lastName,
+          item.phone,
+          item.email,
+        ),
+      ),
+      [
+        ('both', 'Both', '0612345678', 'both@example.com'),
+        ('phone', 'PhoneOnly', '0600000000', null),
+        ('email', 'EmailOnly', null, 'email@example.com'),
+        ('none', 'Neither', null, null),
+      ],
+    );
   });
 }

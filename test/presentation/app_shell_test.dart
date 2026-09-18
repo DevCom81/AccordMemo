@@ -9,11 +9,15 @@ import 'package:accord_memo/presentation/dashboard/dashboard_strings.dart';
 import 'package:accord_memo/presentation/dev/demo_mode.dart';
 import 'package:accord_memo/presentation/history/history_providers.dart';
 import 'package:accord_memo/presentation/history/history_strings.dart';
+import 'package:accord_memo/presentation/settings/settings_providers.dart';
+import 'package:accord_memo/presentation/settings/settings_strings.dart';
 import 'package:accord_memo/presentation/shell/app_shell.dart';
 import 'package:accord_memo/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/fake_app_data_locator.dart';
 
 void main() {
   testWidgets('navigue vers les placeholders et recharge Aujourd’hui au retour', (
@@ -45,6 +49,9 @@ void main() {
             historyLoads += 1;
             return const <HistoryEntry>[];
           }),
+          appDataLocatorProvider.overrideWith(
+            (ref) => FakeAppDataLocator.displayOnly(),
+          ),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -88,9 +95,12 @@ void main() {
     await tester.tap(find.text('Paramètres'));
     await tester.pumpAndSettle();
     expect(find.text('Paramètres'), findsWidgets);
+    expect(find.text(settingsLocalOnlyMessage), findsOneWidget);
+    expect(find.text(settingsBackupButton), findsOneWidget);
+    expect(find.text(settingsRestoreButton), findsOneWidget);
     expect(
       find.text('Cette section sera disponible prochainement.'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(historyLoads, 2);
   });
@@ -119,6 +129,9 @@ void main() {
             (ref) async => const <HistoryEntry>[],
           ),
           demoModeProvider.overrideWith((ref) => true),
+          appDataLocatorProvider.overrideWith(
+            (ref) => FakeAppDataLocator.displayOnly(),
+          ),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -154,6 +167,9 @@ void main() {
           clientsSearchProvider.overrideWith((ref) async => <Customer>[]),
           historySnapshotProvider.overrideWith(
             (ref) async => const <HistoryEntry>[],
+          ),
+          appDataLocatorProvider.overrideWith(
+            (ref) => FakeAppDataLocator.displayOnly(),
           ),
         ],
         child: MaterialApp(

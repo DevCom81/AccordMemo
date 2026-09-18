@@ -301,6 +301,8 @@ class _NextDueHero extends StatelessWidget {
     final semanticsDetails = [
       piano,
       ?city,
+      if (DashboardReminderContacts.isPresent(reminder.phone)) reminder.phone!,
+      if (DashboardReminderContacts.isPresent(reminder.email)) reminder.email!,
     ].where((part) => part.isNotEmpty).join('. ');
 
     return Semantics(
@@ -336,6 +338,12 @@ class _NextDueHero extends StatelessWidget {
                       Text(
                         city,
                         style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    if (DashboardReminderContacts.isPresent(reminder.phone) ||
+                        DashboardReminderContacts.isPresent(reminder.email))
+                      DashboardReminderContacts(
+                        phone: reminder.phone,
+                        email: reminder.email,
                       ),
                   ],
                 ),

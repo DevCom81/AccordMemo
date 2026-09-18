@@ -7,7 +7,7 @@ import '../dashboard/dashboard_page.dart';
 import '../dev/demo_mode.dart';
 import '../history/history_page.dart';
 import '../history/history_providers.dart';
-import '../placeholders/coming_soon_page.dart';
+import '../settings/settings_page.dart';
 import '../theme/app_colors.dart';
 import 'app_destinations.dart';
 
@@ -63,7 +63,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                   ),
                   const ClientsPage(),
                   const HistoryPage(),
-                  const ComingSoonPage(title: 'Paramètres'),
+                  const SettingsPage(),
                 ],
               ),
             ),
