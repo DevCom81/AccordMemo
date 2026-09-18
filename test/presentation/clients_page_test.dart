@@ -9,10 +9,12 @@ import 'package:accord_memo/domain/customer/customer_repository.dart';
 import 'package:accord_memo/domain/piano/piano.dart';
 import 'package:accord_memo/domain/piano/piano_repository.dart';
 import 'package:accord_memo/domain/piano/piano_type.dart';
+import 'package:accord_memo/domain/reminder/reminder_repository.dart';
 import 'package:accord_memo/presentation/app_providers.dart';
 import 'package:accord_memo/presentation/clients/clients_page.dart';
 import 'package:accord_memo/presentation/clients/clients_providers.dart';
 import 'package:accord_memo/presentation/clients/clients_strings.dart';
+import 'package:accord_memo/presentation/clients/piano_summary_card.dart';
 import 'package:accord_memo/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -103,15 +105,16 @@ CustomerService _customerService(
 
 PianoService _pianoService(
   CustomerRepository customers,
-  PianoRepository pianos,
-) {
+  PianoRepository pianos, {
+  ReminderRepository? reminders,
+}) {
   return PianoService(
     clock: FixedClock(_now),
     idGenerator: FakeIdGenerator(spareIds()),
     transactions: const ImmediateTransactionRunner(),
     pianos: pianos,
     customers: customers,
-    reminders: InMemoryReminderRepository(),
+    reminders: reminders ?? InMemoryReminderRepository(),
     activities: InMemoryActivityRepository(pianos),
   );
 }
@@ -119,6 +122,7 @@ PianoService _pianoService(
 Widget _clientsApp({
   required CustomerRepository customers,
   PianoRepository? pianos,
+  ReminderRepository? reminders,
 }) {
   final pianoRepo = pianos ?? InMemoryPianoRepository();
   return ProviderScope(
@@ -127,7 +131,7 @@ Widget _clientsApp({
         (ref) => _customerService(customers, pianoRepo),
       ),
       pianoServiceProvider.overrideWith(
-        (ref) => _pianoService(customers, pianoRepo),
+        (ref) => _pianoService(customers, pianoRepo, reminders: reminders),
       ),
     ],
     child: MaterialApp(
@@ -142,6 +146,13 @@ Future<void> _prepareDesktop(WidgetTester tester, {Size size = const Size(1400, 
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+Finder _pianoCard(String name) {
+  return find.ancestor(
+    of: find.text(name),
+    matching: find.byType(PianoSummaryCard),
+  );
 }
 
 void main() {
@@ -478,6 +489,7 @@ void main() {
     expect(find.text(clientsEditCustomer), findsNothing);
     expect(find.text(clientsArchiveAction), findsNothing);
     expect(find.text(clientsRestoreAction), findsOneWidget);
+    expect(find.text(clientsAddPiano), findsNothing);
   });
 
   testWidgets('distingue un piano archivé sans bouton mort', (tester) async {
@@ -518,7 +530,27 @@ void main() {
     await tester.tap(find.text(clientsArchivedPianosSection));
     await tester.pumpAndSettle();
     expect(find.text('Schimmel 120'), findsOneWidget);
-    expect(find.text('Restaurer'), findsNothing);
+    expect(
+      find.descendant(
+        of: _pianoCard('Schimmel 120'),
+        matching: find.text(clientsEditCustomer),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: _pianoCard('Schimmel 120'),
+        matching: find.text(clientsArchiveAction),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: _pianoCard('Schimmel 120'),
+        matching: find.text(clientsRestoreAction),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('en largeur réduite ouvre la fiche puis revient à la liste', (
@@ -1029,6 +1061,628 @@ void main() {
     expect(find.byType(AlertDialog), findsOneWidget);
   });
 
+  testWidgets('ouvre le formulaire de création de piano', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    await customers.insert(
+      _customer(
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        lastName: 'Dupont',
+        firstName: 'Jean',
+      ),
+    );
+    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, clientsAddPiano));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(clientsCreatePianoTitle),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('refuse un piano sans marque, modèle ni type', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    await customers.insert(
+      _customer(
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        lastName: 'Dupont',
+        firstName: 'Jean',
+      ),
+    );
+    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, clientsAddPiano));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text(clientsPianoIdentificationRequired), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('refuse un intervalle hors 1..60', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    await customers.insert(
+      _customer(
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        lastName: 'Dupont',
+        firstName: 'Jean',
+      ),
+    );
+    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, clientsAddPiano));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsPianoBrandLabel),
+      'Yamaha',
+    );
+    final interval = find.widgetWithText(
+      TextFormField,
+      clientsPianoIntervalLabel,
+    );
+    await tester.ensureVisible(interval);
+    await tester.enterText(interval, '61');
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text(clientsPianoIntervalInvalid), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('crée un piano via PianoService et conserve le client', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final reminders = InMemoryReminderRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    await customers.insert(dupont);
+
+    await tester.pumpWidget(
+      _clientsApp(customers: customers, pianos: pianos, reminders: reminders),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, clientsAddPiano));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsPianoBrandLabel),
+      'Yamaha',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsPianoModelLabel),
+      'U1',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Yamaha U1'), findsOneWidget);
+    expect(find.text(clientsNoPianoTitle), findsNothing);
+
+    final created = await pianos.findById(
+      PianoId('00000000-0000-4000-8000-000000000001'),
+    );
+    expect(created, isNotNull);
+    expect(created!.customerId, dupont.id);
+    expect(created.brand, 'Yamaha');
+    expect(created.model, 'U1');
+    expect(created.isArchived, isFalse);
+    expect(await reminders.findScheduledByPianoId(created.id), isNull);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    expect(container.read(selectedCustomerIdProvider), dupont.id);
+  });
+
+  testWidgets('préremplit la modification piano et conserve customerId', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+      location: 'Salon',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+
+    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsEditCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(clientsEditPianoTitle),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, clientsPianoBrandLabel),
+          )
+          .controller
+          ?.text,
+      'Yamaha',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, clientsPianoLocationLabel),
+          )
+          .controller
+          ?.text,
+      'Salon',
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsPianoLocationLabel),
+      'Cuisine',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Cuisine'), findsOneWidget);
+    expect(find.text('Salon'), findsNothing);
+    final updated = await pianos.findById(yamaha.id);
+    expect(updated!.location, 'Cuisine');
+    expect(updated.customerId, dupont.id);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    expect(container.read(selectedCustomerIdProvider), dupont.id);
+  });
+
+  testWidgets('demande confirmation puis archive le piano via PianoService', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+
+    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsArchiveAction),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsArchivePianoTitle), findsOneWidget);
+    expect(find.text(clientsArchivePianoBody), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(TextButton, clientsCancel),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect((await pianos.findById(yamaha.id))!.isArchived, isFalse);
+
+    await tester.tap(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsArchiveAction),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsArchivePianoConfirm),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Yamaha U1'), findsNothing);
+    expect((await pianos.findById(yamaha.id))!.isArchived, isTrue);
+
+    await tester.tap(find.text(clientsArchivedPianosSection));
+    await tester.pumpAndSettle();
+    expect(find.text('Yamaha U1'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsEditCustomer),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('restaure un piano via PianoService sans recréer de rappel', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final reminders = InMemoryReminderRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+      archived: true,
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+
+    await tester.pumpWidget(
+      _clientsApp(customers: customers, pianos: pianos, reminders: reminders),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(clientsArchivedPianosSection));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsRestoreAction),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(clientsRestorePianoTitle), findsOneWidget);
+    expect(find.text(clientsRestorePianoBody), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsRestorePianoConfirm),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Yamaha U1'), findsOneWidget);
+    expect(find.text(clientsArchivedPianosSection), findsNothing);
+    expect((await pianos.findById(yamaha.id))!.isArchived, isFalse);
+    expect(await reminders.findScheduledByPianoId(yamaha.id), isNull);
+    expect(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsEditCustomer),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('aucune mutation piano depuis un client archivé', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final martin = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Martin',
+      firstName: 'Marie',
+      archived: true,
+    );
+    await customers.insert(martin);
+    await pianos.insert(
+      _piano(
+        id: '11111111-1111-4111-8111-111111111111',
+        customerId: martin.id,
+        brand: 'Yamaha',
+        model: 'U1',
+      ),
+    );
+    await pianos.insert(
+      _piano(
+        id: '22222222-2222-4222-8222-222222222222',
+        customerId: martin.id,
+        brand: 'Schimmel',
+        model: '120',
+        archived: true,
+      ),
+    );
+
+    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(clientsFilterArchived));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Marie Martin'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsAddPiano), findsNothing);
+    expect(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsEditCustomer),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsArchiveAction),
+      ),
+      findsNothing,
+    );
+    await tester.tap(find.text(clientsArchivedPianosSection));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: _pianoCard('Schimmel 120'),
+        matching: find.text(clientsRestoreAction),
+      ),
+      findsNothing,
+    );
+  });
+
+  testWidgets('désactiver les rappels exige une confirmation avant update', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+
+    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsEditCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final remindersSwitch = find.byType(Switch);
+    await tester.ensureVisible(remindersSwitch);
+    await tester.tap(remindersSwitch);
+    await tester.pump();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog).first,
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsDisablePianoRemindersTitle), findsOneWidget);
+    expect(find.text(clientsDisablePianoRemindersBody), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(AlertDialog, clientsDisablePianoRemindersTitle),
+        matching: find.widgetWithText(TextButton, clientsCancel),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect((await pianos.findById(yamaha.id))!.remindersEnabled, isTrue);
+    expect(find.text(clientsEditPianoTitle), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(FilledButton, clientsDisablePianoRemindersConfirm),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect((await pianos.findById(yamaha.id))!.remindersEnabled, isFalse);
+    expect(find.text(clientsRemindersDisabled), findsOneWidget);
+  });
+
+  testWidgets('réactiver les rappels n’ouvre pas de confirmation ni de rappel', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final reminders = InMemoryReminderRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+      remindersEnabled: false,
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+
+    await tester.pumpWidget(
+      _clientsApp(customers: customers, pianos: pianos, reminders: reminders),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: _pianoCard('Yamaha U1'),
+        matching: find.text(clientsEditCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final remindersSwitch = find.byType(Switch);
+    await tester.ensureVisible(remindersSwitch);
+    await tester.tap(remindersSwitch);
+    await tester.pump();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsDisablePianoRemindersTitle), findsNothing);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect((await pianos.findById(yamaha.id))!.remindersEnabled, isTrue);
+    expect(await reminders.findScheduledByPianoId(yamaha.id), isNull);
+  });
+
+  testWidgets('présente une erreur de mutation piano sans détail technique', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    await customers.insert(
+      _customer(
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        lastName: 'Dupont',
+        firstName: 'Jean',
+      ),
+    );
+    await tester.pumpWidget(
+      _clientsApp(customers: customers, pianos: _FailingInsertPianoRepository()),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, clientsAddPiano));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsPianoBrandLabel),
+      'Yamaha',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsPianoMutationGenericError), findsOneWidget);
+    expect(find.textContaining('SQLite'), findsNothing);
+    expect(find.textContaining('Exception'), findsNothing);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('le dialog piano n’overflow pas à 900×700', (tester) async {
+    await _prepareDesktop(tester, size: const Size(900, 700));
+    final customers = InMemoryCustomerRepository();
+    await customers.insert(
+      _customer(
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        lastName: 'Dupont',
+        firstName: 'Jean',
+      ),
+    );
+    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, clientsAddPiano));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text(clientsCreatePianoTitle), findsOneWidget);
+  });
+
   test('les dialogs clients passent par CustomerService', () {
     const files = [
       'lib/presentation/clients/customer_form_dialog.dart',
@@ -1050,6 +1704,27 @@ void main() {
     ).readAsStringSync();
     expect(form.contains('customerServiceProvider'), isTrue);
     expect(confirm.contains('customerServiceProvider'), isTrue);
+
+    const pianoFiles = [
+      'lib/presentation/clients/piano_form_dialog.dart',
+      'lib/presentation/clients/piano_confirm_dialog.dart',
+      'lib/presentation/clients/client_detail_pane.dart',
+      'lib/presentation/clients/piano_summary_card.dart',
+    ];
+    for (final path in pianoFiles) {
+      final source = File(path).readAsStringSync();
+      expect(source.contains('pianoRepositoryProvider'), isFalse, reason: path);
+      expect(source.contains('recordTuningProvider'), isFalse, reason: path);
+      expect(source.contains('app_database'), isFalse, reason: path);
+    }
+    final pianoForm = File(
+      'lib/presentation/clients/piano_form_dialog.dart',
+    ).readAsStringSync();
+    final pianoConfirm = File(
+      'lib/presentation/clients/piano_confirm_dialog.dart',
+    ).readAsStringSync();
+    expect(pianoForm.contains('pianoServiceProvider'), isTrue);
+    expect(pianoConfirm.contains('pianoServiceProvider'), isTrue);
   });
 }
 
@@ -1121,6 +1796,27 @@ final class _FailingInsertCustomerRepository implements CustomerRepository {
   Future<List<Customer>> search({
     required CustomerStatusFilter filter,
     String query = '',
+  }) async {
+    return const [];
+  }
+}
+
+final class _FailingInsertPianoRepository implements PianoRepository {
+  @override
+  Future<Piano?> findById(PianoId id) async => null;
+
+  @override
+  Future<void> insert(Piano piano) async {
+    throw Exception('SQLite constraint failed');
+  }
+
+  @override
+  Future<void> update(Piano piano) async {}
+
+  @override
+  Future<List<Piano>> findByCustomerId({
+    required CustomerId customerId,
+    required PianoStatusFilter filter,
   }) async {
     return const [];
   }

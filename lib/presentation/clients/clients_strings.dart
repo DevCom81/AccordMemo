@@ -114,6 +114,78 @@ const clientsNotArchived = 'Ce client n’est pas archivé.';
 
 const clientsNotFound = 'Ce client est introuvable.';
 
+const clientsAddPiano = 'Ajouter un piano';
+
+const clientsCreatePianoTitle = 'Nouveau piano';
+
+const clientsEditPianoTitle = 'Modifier le piano';
+
+const clientsPianoBrandLabel = 'Marque';
+
+const clientsPianoModelLabel = 'Modèle';
+
+const clientsPianoSerialLabel = 'Numéro de série';
+
+const clientsPianoTypeLabel = 'Type';
+
+const clientsPianoTypeNone = 'Non renseigné';
+
+const clientsPianoTypeDroit = 'Piano droit';
+
+const clientsPianoTypeQueue = 'Piano à queue';
+
+const clientsPianoLocationLabel = 'Emplacement';
+
+const clientsPianoNotesLabel = 'Notes';
+
+const clientsPianoRemindersEnabledLabel = 'Rappels activés';
+
+const clientsPianoIntervalLabel = 'Intervalle de rappel (mois)';
+
+const clientsPianoIdentificationRequired =
+    'Indiquez au moins la marque, le modèle ou le type.';
+
+const clientsPianoIntervalInvalid =
+    'L’intervalle doit être compris entre 1 et 60 mois.';
+
+const clientsPianoMutationGenericError = 'Impossible d’enregistrer le piano.';
+
+const clientsPianoArchivedNotModifiable =
+    'Ce piano est archivé. Restaurez-le avant de le modifier.';
+
+const clientsPianoAlreadyArchived = 'Ce piano est déjà archivé.';
+
+const clientsPianoNotArchived = 'Ce piano n’est pas archivé.';
+
+const clientsPianoNotFound = 'Ce piano est introuvable.';
+
+const clientsPianoCustomerArchived =
+    'Impossible d’ajouter un piano à un client archivé.';
+
+const clientsArchivePianoTitle = 'Archiver ce piano ?';
+
+const clientsArchivePianoBody =
+    'Le piano sera archivé. Son éventuel rappel planifié sera annulé. '
+    'L’historique reste conservé. Le client n’est pas archivé.';
+
+const clientsArchivePianoConfirm = 'Archiver';
+
+const clientsRestorePianoTitle = 'Restaurer ce piano ?';
+
+const clientsRestorePianoBody =
+    'Le piano redeviendra actif. Aucun rappel ne sera recréé automatiquement.';
+
+const clientsRestorePianoConfirm = 'Restaurer';
+
+const clientsDisablePianoRemindersTitle =
+    'Désactiver les rappels pour ce piano ?';
+
+const clientsDisablePianoRemindersBody =
+    'Le rappel actuellement planifié, s’il existe, sera annulé. '
+    'Aucun nouveau rappel ne sera créé tant que les rappels resteront désactivés.';
+
+const clientsDisablePianoRemindersConfirm = 'Désactiver';
+
 String clientsReminderEveryMonths(int months) {
   return 'Rappel tous les $months mois';
 }

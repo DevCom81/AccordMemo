@@ -7,10 +7,20 @@ import '../theme/app_colors.dart';
 import 'clients_strings.dart';
 
 class PianoSummaryCard extends StatelessWidget {
-  const PianoSummaryCard({super.key, required this.piano, this.muted = false});
+  const PianoSummaryCard({
+    super.key,
+    required this.piano,
+    this.muted = false,
+    this.onEdit,
+    this.onArchive,
+    this.onRestore,
+  });
 
   final Piano piano;
   final bool muted;
+  final VoidCallback? onEdit;
+  final VoidCallback? onArchive;
+  final VoidCallback? onRestore;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +38,7 @@ class PianoSummaryCard extends StatelessWidget {
         ? clientsReminderEveryMonths(piano.reminderIntervalMonths)
         : clientsRemindersDisabled;
     final location = piano.location;
+    final canMutate = onEdit != null || onArchive != null || onRestore != null;
 
     final content = Opacity(
       opacity: muted ? 0.72 : 1,
@@ -63,6 +74,34 @@ class PianoSummaryCard extends StatelessWidget {
                       : AppColors.copperDark,
                 ),
               ),
+              if (canMutate) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (onEdit != null)
+                      OutlinedButton(
+                        onPressed: onEdit,
+                        child: const Text(clientsEditCustomer),
+                      ),
+                    if (onArchive != null)
+                      OutlinedButton(
+                        onPressed: onArchive,
+                        child: const Text(clientsArchiveAction),
+                      ),
+                    if (onRestore != null)
+                      FilledButton(
+                        onPressed: onRestore,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.forest,
+                          foregroundColor: AppColors.onForest,
+                        ),
+                        child: const Text(clientsRestoreAction),
+                      ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

@@ -4,9 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/dashboard/dashboard_display_names.dart';
 import '../../domain/customer/civility.dart';
 import '../../domain/customer/customer.dart';
+import '../../domain/piano/piano.dart';
 import '../theme/app_colors.dart';
 import 'clients_providers.dart';
 import 'clients_strings.dart';
+import 'piano_confirm_dialog.dart';
+import 'piano_form_dialog.dart';
 import 'piano_summary_card.dart';
 
 class ClientDetailPane extends ConsumerWidget {
@@ -99,7 +102,7 @@ class ClientDetailPane extends ConsumerWidget {
               ),
             ),
           ],
-          data: (pianos) => _pianoSlivers(context, pianos),
+          data: (pianos) => _pianoSlivers(context, ref, pianos),
         ),
       ],
     );
@@ -138,14 +141,108 @@ class ClientDetailPane extends ConsumerWidget {
     return lines;
   }
 
-  List<Widget> _pianoSlivers(BuildContext context, SelectedCustomerPianos pianos) {
+  Future<void> _addPiano(BuildContext context, WidgetRef ref) async {
+    if (customer.isArchived) {
+      return;
+    }
+    final created = await showPianoFormDialog(
+      context: context,
+      ref: ref,
+      customerId: customer.id,
+    );
+    if (!context.mounted || created == null) {
+      return;
+    }
+    ref.invalidate(selectedCustomerPianosProvider);
+  }
+
+  Future<void> _editPiano(
+    BuildContext context,
+    WidgetRef ref,
+    Piano piano,
+  ) async {
+    if (customer.isArchived || piano.isArchived) {
+      return;
+    }
+    final updated = await showPianoFormDialog(
+      context: context,
+      ref: ref,
+      customerId: customer.id,
+      existing: piano,
+    );
+    if (!context.mounted || updated == null) {
+      return;
+    }
+    ref.invalidate(selectedCustomerPianosProvider);
+  }
+
+  Future<void> _archivePiano(
+    BuildContext context,
+    WidgetRef ref,
+    Piano piano,
+  ) async {
+    if (customer.isArchived || piano.isArchived) {
+      return;
+    }
+    final archived = await showArchivePianoDialog(
+      context: context,
+      ref: ref,
+      pianoId: piano.id,
+    );
+    if (!context.mounted || !archived) {
+      return;
+    }
+    ref.invalidate(selectedCustomerPianosProvider);
+  }
+
+  Future<void> _restorePiano(
+    BuildContext context,
+    WidgetRef ref,
+    Piano piano,
+  ) async {
+    if (customer.isArchived || !piano.isArchived) {
+      return;
+    }
+    final restored = await showRestorePianoDialog(
+      context: context,
+      ref: ref,
+      pianoId: piano.id,
+    );
+    if (!context.mounted || restored == null) {
+      return;
+    }
+    ref.invalidate(selectedCustomerPianosProvider);
+  }
+
+  List<Widget> _pianoSlivers(
+    BuildContext context,
+    WidgetRef ref,
+    SelectedCustomerPianos pianos,
+  ) {
     return [
       SliverPadding(
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
         sliver: SliverToBoxAdapter(
-          child: Text(
-            clientsPianosSection,
-            style: Theme.of(context).textTheme.titleLarge,
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              Text(
+                clientsPianosSection,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              if (!customer.isArchived)
+                FilledButton.icon(
+                  onPressed: () => _addPiano(context, ref),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.forest,
+                    foregroundColor: AppColors.onForest,
+                  ),
+                  icon: const Icon(Icons.add),
+                  label: const Text(clientsAddPiano),
+                ),
+            ],
           ),
         ),
       ),
@@ -170,7 +267,16 @@ class ClientDetailPane extends ConsumerWidget {
             itemCount: pianos.active.length,
             separatorBuilder: (context, index) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              return PianoSummaryCard(piano: pianos.active[index]);
+              final piano = pianos.active[index];
+              return PianoSummaryCard(
+                piano: piano,
+                onEdit: customer.isArchived
+                    ? null
+                    : () => _editPiano(context, ref, piano),
+                onArchive: customer.isArchived
+                    ? null
+                    : () => _archivePiano(context, ref, piano),
+              );
             },
           ),
         ),
@@ -188,7 +294,13 @@ class ClientDetailPane extends ConsumerWidget {
               children: [
                 for (var i = 0; i < pianos.archived.length; i++) ...[
                   if (i > 0) const SizedBox(height: 10),
-                  PianoSummaryCard(piano: pianos.archived[i], muted: true),
+                  PianoSummaryCard(
+                    piano: pianos.archived[i],
+                    muted: true,
+                    onRestore: customer.isArchived
+                        ? null
+                        : () => _restorePiano(context, ref, pianos.archived[i]),
+                  ),
                 ],
               ],
             ),
