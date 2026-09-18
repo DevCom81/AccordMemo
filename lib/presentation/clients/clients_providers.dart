@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/customer/customer.dart';
 import '../../domain/customer/customer_repository.dart';
+import '../../domain/piano/piano.dart';
+import '../../domain/piano/piano_repository.dart';
 import '../app_providers.dart';
 
 const clientsSearchDebounce = Duration(milliseconds: 300);
@@ -24,6 +26,26 @@ final clientsSearchProvider = FutureProvider<List<Customer>>((ref) {
     filter: filter,
     query: query,
   );
+});
+
+final selectedCustomerPianosProvider = FutureProvider<SelectedCustomerPianos>((
+  ref,
+) async {
+  final id = ref.watch(selectedCustomerIdProvider);
+  if (id == null) {
+    return const SelectedCustomerPianos.empty();
+  }
+
+  final service = ref.watch(pianoServiceProvider);
+  final active = await service.findByCustomer(
+    customerId: id,
+    filter: PianoStatusFilter.active,
+  );
+  final archived = await service.findByCustomer(
+    customerId: id,
+    filter: PianoStatusFilter.archived,
+  );
+  return SelectedCustomerPianos(active: active, archived: archived);
 });
 
 final class ClientsFilter extends Notifier<CustomerStatusFilter> {
@@ -72,4 +94,18 @@ final class SelectedCustomerId extends Notifier<CustomerId?> {
   void clear() {
     state = null;
   }
+}
+
+final class SelectedCustomerPianos {
+  const SelectedCustomerPianos({
+    required this.active,
+    required this.archived,
+  });
+
+  const SelectedCustomerPianos.empty()
+    : active = const [],
+      archived = const [];
+
+  final List<Piano> active;
+  final List<Piano> archived;
 }

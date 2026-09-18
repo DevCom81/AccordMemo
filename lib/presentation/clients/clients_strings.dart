@@ -24,3 +24,31 @@ const clientsEmptySearchBody =
 const clientsLoadErrorMessage = 'Impossible de charger les clients.';
 
 const clientsLoadingMessage = 'Chargement des clients';
+
+const clientsPianosLoading = 'Chargement des pianos';
+
+const clientsSelectPrompt = 'Sélectionnez un client dans la liste.';
+
+const clientsArchivedBanner = 'Client archivé';
+
+const clientsPianosSection = 'Pianos';
+
+const clientsArchivedPianosSection = 'Pianos archivés';
+
+const clientsNoPianoTitle = 'Aucun piano.';
+
+const clientsNoPianoBody = 'Ce client n’a pas encore de piano enregistré.';
+
+const clientsPianosLoadError = 'Impossible de charger les pianos.';
+
+const clientsBackToList = 'Retour';
+
+const clientsRemindersDisabled = 'Rappels désactivés';
+
+const clientsPhoneLabel = 'Téléphone';
+
+const clientsEmailLabel = 'E-mail';
+
+String clientsReminderEveryMonths(int months) {
+  return 'Rappel tous les $months mois';
+}

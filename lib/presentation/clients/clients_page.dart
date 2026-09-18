@@ -5,8 +5,12 @@ import '../../application/dashboard/dashboard_display_names.dart';
 import '../../domain/customer/customer.dart';
 import '../../domain/customer/customer_repository.dart';
 import '../theme/app_colors.dart';
+import 'client_detail_pane.dart';
 import 'clients_providers.dart';
 import 'clients_strings.dart';
+
+const clientsMasterDetailBreakpoint = 960.0;
+const _listPaneWidth = 340.0;
 
 class ClientsPage extends ConsumerStatefulWidget {
   const ClientsPage({super.key});
@@ -43,145 +47,225 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
       });
     });
 
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(40, 36, 40, 16),
-          sliver: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  clientsPageTitle,
-                  style: Theme.of(context).textTheme.headlineLarge,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= clientsMasterDetailBreakpoint;
+        final selectedCustomer = async.asData?.value
+            .where((customer) => customer.id == selectedId)
+            .firstOrNull;
+        final compactDetail = !wide && selectedCustomer != null;
+
+        if (compactDetail) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 20, 40, 0),
+                child: TextButton.icon(
+                  onPressed: () {
+                    ref.read(selectedCustomerIdProvider.notifier).clear();
+                  },
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text(clientsBackToList),
                 ),
-                const SizedBox(height: 24),
-                Semantics(
-                  textField: true,
-                  label: clientsSearchSemanticsLabel,
-                  child: TextField(
-                    controller: _searchController,
-                    textInputAction: TextInputAction.search,
-                    onChanged: (value) {
-                      ref.read(clientsQueryProvider.notifier).schedule(value);
-                    },
-                    decoration: InputDecoration(
-                      hintText: clientsSearchHint,
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: AppColors.card,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.line),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.line),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.forest),
-                      ),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(32, 8, 32, 24),
+                  child: ClientDetailPane(customer: selectedCustomer),
+                ),
+              ),
+            ],
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(40, 36, 40, 16),
+              child: _ClientsHeader(
+                controller: _searchController,
+                filter: filter,
+                onQueryChanged: (value) {
+                  ref.read(clientsQueryProvider.notifier).schedule(value);
+                },
+                onFilterChanged: (value) {
+                  ref.read(clientsFilterProvider.notifier).setFilter(value);
+                },
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(40, 0, 40, 24),
+                child: async.when(
+                  skipLoadingOnReload: true,
+                  loading: () => const _ClientsStatus(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text(clientsLoadingMessage),
+                      ],
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                _FilterToggle(
-                  filter: filter,
-                  onChanged: (value) {
-                    ref.read(clientsFilterProvider.notifier).setFilter(value);
+                  error: (_, _) => _ClientsStatus(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(clientsLoadErrorMessage),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () => ref.invalidate(clientsSearchProvider),
+                          child: const Text('Réessayer'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  data: (customers) {
+                    if (customers.isEmpty) {
+                      return _EmptyState(
+                        filter: filter,
+                        hasQuery: ref.read(clientsQueryProvider).isNotEmpty,
+                      );
+                    }
+                    final list = _ClientsList(
+                      customers: customers,
+                      selectedId: selectedId,
+                      onSelect: (id) {
+                        ref.read(selectedCustomerIdProvider.notifier).select(id);
+                      },
+                    );
+                    if (!wide) {
+                      return list;
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(width: _listPaneWidth, child: list),
+                        const SizedBox(width: 24),
+                        Expanded(
+                          child: selectedCustomer == null
+                              ? const _SelectPrompt()
+                              : ClientDetailPane(customer: selectedCustomer),
+                        ),
+                      ],
+                    );
                   },
                 ),
-              ],
-            ),
-          ),
-        ),
-        ...async.when(
-          skipLoadingOnReload: true,
-          loading: () => [
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: _ClientsStatus(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text(clientsLoadingMessage),
-                  ],
-                ),
               ),
             ),
           ],
-          error: (_, _) => [
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _ClientsStatus(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(clientsLoadErrorMessage),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => ref.invalidate(clientsSearchProvider),
-                      child: const Text('Réessayer'),
-                    ),
-                  ],
-                ),
+        );
+      },
+    );
+  }
+}
+
+class _ClientsHeader extends StatelessWidget {
+  const _ClientsHeader({
+    required this.controller,
+    required this.filter,
+    required this.onQueryChanged,
+    required this.onFilterChanged,
+  });
+
+  final TextEditingController controller;
+  final CustomerStatusFilter filter;
+  final ValueChanged<String> onQueryChanged;
+  final ValueChanged<CustomerStatusFilter> onFilterChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          clientsPageTitle,
+          style: Theme.of(context).textTheme.headlineLarge,
+        ),
+        const SizedBox(height: 24),
+        Semantics(
+          textField: true,
+          label: clientsSearchSemanticsLabel,
+          child: TextField(
+            controller: controller,
+            textInputAction: TextInputAction.search,
+            onChanged: onQueryChanged,
+            decoration: InputDecoration(
+              hintText: clientsSearchHint,
+              prefixIcon: const Icon(Icons.search),
+              filled: true,
+              fillColor: AppColors.card,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.line),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.forest),
               ),
             ),
-          ],
-          data: (customers) => _resultsSlivers(
-            context: context,
-            customers: customers,
-            filter: filter,
-            query: ref.read(clientsQueryProvider),
-            selectedId: selectedId,
           ),
         ),
+        const SizedBox(height: 16),
+        _FilterToggle(filter: filter, onChanged: onFilterChanged),
       ],
     );
   }
+}
 
-  List<Widget> _resultsSlivers({
-    required BuildContext context,
-    required List<Customer> customers,
-    required CustomerStatusFilter filter,
-    required String query,
-    required CustomerId? selectedId,
-  }) {
-    if (customers.isEmpty) {
-      return [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: _EmptyState(filter: filter, hasQuery: query.isNotEmpty),
-        ),
-      ];
-    }
+class _ClientsList extends StatelessWidget {
+  const _ClientsList({
+    required this.customers,
+    required this.selectedId,
+    required this.onSelect,
+  });
 
-    return [
-      SliverPadding(
-        padding: const EdgeInsets.fromLTRB(40, 8, 40, 40),
-        sliver: SliverList.separated(
-          itemCount: customers.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 10),
-          itemBuilder: (context, index) {
-            final customer = customers[index];
-            return _ClientRow(
-              customer: customer,
-              selected: customer.id == selectedId,
-              onSelect: () {
-                ref.read(selectedCustomerIdProvider.notifier).select(customer.id);
-              },
-            );
-          },
+  final List<Customer> customers;
+  final CustomerId? selectedId;
+  final ValueChanged<CustomerId> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      itemCount: customers.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final customer = customers[index];
+        return _ClientRow(
+          customer: customer,
+          selected: customer.id == selectedId,
+          onSelect: () => onSelect(customer.id),
+        );
+      },
+    );
+  }
+}
+
+class _SelectPrompt extends StatelessWidget {
+  const _SelectPrompt();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        clientsSelectPrompt,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: AppColors.muted,
         ),
+        textAlign: TextAlign.center,
       ),
-    ];
+    );
   }
 }
 
