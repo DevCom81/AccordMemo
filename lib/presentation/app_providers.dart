@@ -9,6 +9,7 @@ import '../application/ports/id_generator.dart';
 import '../application/ports/transaction_runner.dart';
 import '../application/reminder/reminder_service.dart';
 import '../application/tuning/correct_tuning.dart';
+import '../application/tuning/latest_piano_tuning_query.dart';
 import '../application/tuning/record_tuning.dart';
 import '../application/tuning/tuning_service.dart';
 import '../domain/activity/activity_repository.dart';
@@ -22,6 +23,7 @@ import '../infrastructure/persistence/app_database.dart';
 import '../infrastructure/persistence/drift_activity_repository.dart';
 import '../infrastructure/persistence/drift_customer_repository.dart';
 import '../infrastructure/persistence/drift_dashboard_reminder_query.dart';
+import '../infrastructure/persistence/drift_latest_piano_tuning_query.dart';
 import '../infrastructure/persistence/drift_piano_repository.dart';
 import '../infrastructure/persistence/drift_reminder_repository.dart';
 import '../infrastructure/persistence/drift_transaction_runner.dart';
@@ -116,6 +118,10 @@ final recordTuningProvider = Provider<RecordTuning>((ref) {
     reminders: ref.watch(reminderRepositoryProvider),
     activities: ref.watch(activityRepositoryProvider),
   );
+});
+
+final latestPianoTuningQueryProvider = Provider<LatestPianoTuningQuery>((ref) {
+  return DriftLatestPianoTuningQuery(ref.watch(appDatabaseProvider));
 });
 
 final correctTuningProvider = Provider<CorrectTuning>((ref) {

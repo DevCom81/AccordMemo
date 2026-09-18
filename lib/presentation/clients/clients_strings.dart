@@ -186,6 +186,23 @@ const clientsDisablePianoRemindersBody =
 
 const clientsDisablePianoRemindersConfirm = 'Désactiver';
 
+const clientsRecordTuning = 'Enregistrer un accord';
+
+const clientsRecordTuningTitle = 'Enregistrer un accord';
+
+const clientsRecordTuningDateLabel = 'Date de l’accord';
+
+const clientsRecordTuningNotesLabel = 'Notes';
+
+const clientsRecordTuningSave = 'Enregistrer';
+
+const clientsLastTuningPrefix = 'Dernier accord : ';
+
+const clientsTuningDateInFuture =
+    'La date de l’accord ne peut pas être postérieure à aujourd’hui.';
+
+const clientsRecordTuningGenericError = 'Impossible d’enregistrer l’accord.';
+
 String clientsReminderEveryMonths(int months) {
   return 'Rappel tous les $months mois';
 }

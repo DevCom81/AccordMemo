@@ -2,19 +2,28 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:accord_memo/application/customer/customer_service.dart';
+import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
 import 'package:accord_memo/application/piano/piano_service.dart';
+import 'package:accord_memo/application/tuning/record_tuning.dart';
 import 'package:accord_memo/domain/customer/civility.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/customer/customer_repository.dart';
 import 'package:accord_memo/domain/piano/piano.dart';
 import 'package:accord_memo/domain/piano/piano_repository.dart';
 import 'package:accord_memo/domain/piano/piano_type.dart';
+import 'package:accord_memo/domain/reminder/reminder.dart';
+import 'package:accord_memo/domain/reminder/reminder_cancellation_reason.dart';
 import 'package:accord_memo/domain/reminder/reminder_repository.dart';
+import 'package:accord_memo/domain/reminder/reminder_status.dart';
+import 'package:accord_memo/domain/shared/calendar_date.dart';
+import 'package:accord_memo/domain/tuning/tuning.dart';
+import 'package:accord_memo/domain/tuning/tuning_repository.dart';
 import 'package:accord_memo/presentation/app_providers.dart';
 import 'package:accord_memo/presentation/clients/clients_page.dart';
 import 'package:accord_memo/presentation/clients/clients_providers.dart';
 import 'package:accord_memo/presentation/clients/clients_strings.dart';
 import 'package:accord_memo/presentation/clients/piano_summary_card.dart';
+import 'package:accord_memo/presentation/formatters/french_date_label.dart';
 import 'package:accord_memo/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,10 +34,21 @@ import '../support/fixed_clock.dart';
 import '../support/immediate_transaction_runner.dart';
 import '../support/in_memory_activity_repository.dart';
 import '../support/in_memory_customer_repository.dart';
+import '../support/in_memory_latest_piano_tuning_query.dart';
 import '../support/in_memory_piano_repository.dart';
 import '../support/in_memory_reminder_repository.dart';
+import '../support/in_memory_tuning_repository.dart';
 
 final _now = DateTime.utc(2026, 9, 17, 10);
+
+CalendarDate get _today => CalendarDate.fromLocalInstant(_now);
+
+DashboardSnapshot get _emptyDashboard => DashboardSnapshot(
+  today: _today,
+  overdue: const [],
+  dueSoon: const [],
+  upcoming: const [],
+);
 
 Customer _customer({
   required String id,
@@ -90,15 +110,16 @@ Piano _piano({
 
 CustomerService _customerService(
   CustomerRepository customers,
-  PianoRepository pianos,
-) {
+  PianoRepository pianos, {
+  ReminderRepository? reminders,
+}) {
   return CustomerService(
     clock: FixedClock(_now),
     idGenerator: FakeIdGenerator(spareIds()),
     transactions: const ImmediateTransactionRunner(),
     repository: customers,
     pianos: pianos,
-    reminders: InMemoryReminderRepository(),
+    reminders: reminders ?? InMemoryReminderRepository(),
     activities: InMemoryActivityRepository(pianos),
   );
 }
@@ -123,16 +144,49 @@ Widget _clientsApp({
   required CustomerRepository customers,
   PianoRepository? pianos,
   ReminderRepository? reminders,
+  InMemoryTuningRepository? tunings,
+  RecordTuning? recordTuning,
+  Future<DashboardSnapshot> Function()? loadDashboard,
 }) {
   final pianoRepo = pianos ?? InMemoryPianoRepository();
+  final reminderRepo = reminders ?? InMemoryReminderRepository();
+  final tuningRepo = tunings ?? InMemoryTuningRepository();
+  final clock = FixedClock(_now);
   return ProviderScope(
     overrides: [
+      clockProvider.overrideWith((ref) => clock),
       customerServiceProvider.overrideWith(
-        (ref) => _customerService(customers, pianoRepo),
+        (ref) => _customerService(
+          customers,
+          pianoRepo,
+          reminders: reminderRepo,
+        ),
       ),
       pianoServiceProvider.overrideWith(
-        (ref) => _pianoService(customers, pianoRepo, reminders: reminders),
+        (ref) => _pianoService(customers, pianoRepo, reminders: reminderRepo),
       ),
+      latestPianoTuningQueryProvider.overrideWith(
+        (ref) => InMemoryLatestPianoTuningQuery(
+          pianos: pianoRepo,
+          tunings: tuningRepo,
+        ),
+      ),
+      recordTuningProvider.overrideWith(
+        (ref) =>
+            recordTuning ??
+            RecordTuning(
+              clock: clock,
+              idGenerator: FakeIdGenerator(spareIds()),
+              transactions: const ImmediateTransactionRunner(),
+              tunings: tuningRepo,
+              pianos: pianoRepo,
+              reminders: reminderRepo,
+              activities: InMemoryActivityRepository(pianoRepo),
+            ),
+      ),
+      dashboardSnapshotProvider.overrideWith((ref) {
+        return loadDashboard?.call() ?? Future.value(_emptyDashboard);
+      }),
     ],
     child: MaterialApp(
       theme: buildAppTheme(),
@@ -153,6 +207,24 @@ Finder _pianoCard(String name) {
     of: find.text(name),
     matching: find.byType(PianoSummaryCard),
   );
+}
+
+Finder _recordTuningOnCard(String pianoName) {
+  return find.descendant(
+    of: _pianoCard(pianoName),
+    matching: find.widgetWithText(FilledButton, clientsRecordTuning),
+  );
+}
+
+Finder _recordTuningDialogTitle() {
+  return find.descendant(
+    of: find.byType(AlertDialog),
+    matching: find.text(clientsRecordTuningTitle),
+  );
+}
+
+String _lastTuningLabel(CalendarDate date) {
+  return '$clientsLastTuningPrefix${formatFrenchNumericDate(date)}';
 }
 
 void main() {
@@ -490,6 +562,7 @@ void main() {
     expect(find.text(clientsArchiveAction), findsNothing);
     expect(find.text(clientsRestoreAction), findsOneWidget);
     expect(find.text(clientsAddPiano), findsNothing);
+    expect(find.text(clientsRecordTuning), findsNothing);
   });
 
   testWidgets('distingue un piano archivé sans bouton mort', (tester) async {
@@ -530,6 +603,8 @@ void main() {
     await tester.tap(find.text(clientsArchivedPianosSection));
     await tester.pumpAndSettle();
     expect(find.text('Schimmel 120'), findsOneWidget);
+    expect(_recordTuningOnCard('Yamaha U1'), findsOneWidget);
+    expect(_recordTuningOnCard('Schimmel 120'), findsNothing);
     expect(
       find.descendant(
         of: _pianoCard('Schimmel 120'),
@@ -685,6 +760,13 @@ void main() {
           pianoServiceProvider.overrideWith(
             (ref) => _pianoService(customers, InMemoryPianoRepository()),
           ),
+          latestPianoTuningQueryProvider.overrideWith(
+            (ref) => InMemoryLatestPianoTuningQuery(
+              pianos: InMemoryPianoRepository(),
+              tunings: InMemoryTuningRepository(),
+            ),
+          ),
+          dashboardSnapshotProvider.overrideWith((ref) async => _emptyDashboard),
           selectedCustomerPianosProvider.overrideWith((ref) async {
             throw Exception('SQLite constraint failed');
           }),
@@ -1471,6 +1553,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(clientsAddPiano), findsNothing);
+    expect(_recordTuningOnCard('Yamaha U1'), findsNothing);
     expect(
       find.descendant(
         of: _pianoCard('Yamaha U1'),
@@ -1683,6 +1766,551 @@ void main() {
     expect(find.text(clientsCreatePianoTitle), findsOneWidget);
   });
 
+  testWidgets('affiche Enregistrer un accord sur un piano actif', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(
+      _piano(
+        id: '11111111-1111-4111-8111-111111111111',
+        customerId: dupont.id,
+        brand: 'Yamaha',
+        model: 'U1',
+      ),
+    );
+
+    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+
+    expect(_recordTuningOnCard('Yamaha U1'), findsOneWidget);
+    expect(find.textContaining('Dernier accord'), findsNothing);
+  });
+
+  testWidgets('affiche Dernier accord JJ/MM/AAAA lorsqu’une date existe', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final tunings = InMemoryTuningRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+    await tunings.insert(
+      Tuning.create(
+        id: TuningId('cccccccc-cccc-4ccc-8ccc-cccccccccccc'),
+        pianoId: yamaha.id,
+        tuningDate: CalendarDate(2026, 3, 1),
+        today: _today,
+        now: _now,
+      ),
+    );
+
+    await tester.pumpWidget(
+      _clientsApp(customers: customers, pianos: pianos, tunings: tunings),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(_lastTuningLabel(CalendarDate(2026, 3, 1))), findsOneWidget);
+  });
+
+  testWidgets('ouvre le dialog d’accord à la date du Clock', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(
+      _piano(
+        id: '11111111-1111-4111-8111-111111111111',
+        customerId: dupont.id,
+        brand: 'Yamaha',
+        model: 'U1',
+      ),
+    );
+
+    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(_recordTuningOnCard('Yamaha U1'));
+    await tester.pumpAndSettle();
+
+    expect(_recordTuningDialogTitle(), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(formatFrenchNumericDate(_today)),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(TextFormField, clientsRecordTuningNotesLabel),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(
+          OutlinedButton,
+          formatFrenchNumericDate(_today),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final picker = tester.widget<DatePickerDialog>(
+      find.byType(DatePickerDialog),
+    );
+    expect(picker.lastDate, DateTime(_today.year, _today.month, _today.day));
+  });
+
+  testWidgets(
+    'enregistre un accord via RecordTuning et affiche le dernier accord',
+    (tester) async {
+      await _prepareDesktop(tester);
+      final customers = InMemoryCustomerRepository();
+      final pianos = InMemoryPianoRepository();
+      final reminders = InMemoryReminderRepository();
+      final tunings = InMemoryTuningRepository();
+      var dashboardLoads = 0;
+      final dupont = _customer(
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        lastName: 'Dupont',
+        firstName: 'Jean',
+      );
+      final yamaha = _piano(
+        id: '11111111-1111-4111-8111-111111111111',
+        customerId: dupont.id,
+        brand: 'Yamaha',
+        model: 'U1',
+      );
+      await customers.insert(dupont);
+      await pianos.insert(yamaha);
+
+      await tester.pumpWidget(
+        _clientsApp(
+          customers: customers,
+          pianos: pianos,
+          reminders: reminders,
+          tunings: tunings,
+          loadDashboard: () async {
+            dashboardLoads += 1;
+            return _emptyDashboard;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Jean Dupont'));
+      await tester.pumpAndSettle();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ClientsPage)),
+      );
+      container.listen(
+        dashboardSnapshotProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      await tester.pumpAndSettle();
+      expect(dashboardLoads, 1);
+      final pianoValue = container.read(selectedCustomerPianosProvider).value;
+      final searchValue = container.read(clientsSearchProvider).value;
+
+      await tester.tap(_recordTuningOnCard('Yamaha U1'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.widgetWithText(FilledButton, clientsRecordTuningSave),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.text(_lastTuningLabel(_today)), findsOneWidget);
+      expect(container.read(selectedCustomerIdProvider), dupont.id);
+      expect(tunings.all, hasLength(1));
+      expect(tunings.all.single.pianoId, yamaha.id);
+      expect(tunings.all.single.tuningDate, _today);
+      expect(tunings.all.single.notes, isNull);
+      final reminder = await reminders.findScheduledByPianoId(yamaha.id);
+      expect(reminder, isNotNull);
+      expect(reminder!.dueDate, _today.addMonths(12));
+      expect(reminder.status, ReminderStatus.scheduled);
+      expect(dashboardLoads, 2);
+      expect(
+        identical(
+          container.read(selectedCustomerPianosProvider).value,
+          pianoValue,
+        ),
+        isTrue,
+      );
+      expect(
+        identical(container.read(clientsSearchProvider).value, searchValue),
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets('n’affiche pas de Reminder si les rappels sont désactivés', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final reminders = InMemoryReminderRepository();
+    final tunings = InMemoryTuningRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+      remindersEnabled: false,
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        reminders: reminders,
+        tunings: tunings,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(_recordTuningOnCard('Yamaha U1'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsRecordTuningNotesLabel),
+      '  passage rapide  ',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsRecordTuningSave),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tunings.all.single.notes, 'passage rapide');
+    expect(await reminders.findScheduledByPianoId(yamaha.id), isNull);
+    expect(find.text(_lastTuningLabel(_today)), findsOneWidget);
+  });
+
+  testWidgets('remplace le rappel scheduled existant via RecordTuning', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final reminders = InMemoryReminderRepository();
+    final tunings = InMemoryTuningRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+    final previous = Reminder.schedule(
+      id: ReminderId('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'),
+      pianoId: yamaha.id,
+      originTuningId: TuningId('cccccccc-cccc-4ccc-8ccc-cccccccccccc'),
+      dueDate: CalendarDate(2026, 1, 1),
+      now: _now,
+    );
+    await reminders.insert(previous);
+
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        reminders: reminders,
+        tunings: tunings,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(_recordTuningOnCard('Yamaha U1'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsRecordTuningSave),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final cancelled = await reminders.findById(previous.id);
+    expect(cancelled!.status, ReminderStatus.cancelled);
+    expect(
+      cancelled.cancellationReason,
+      ReminderCancellationReason.supersededByTuning,
+    );
+    final current = await reminders.findScheduledByPianoId(yamaha.id);
+    expect(current, isNotNull);
+    expect(current!.id, isNot(previous.id));
+    expect(current.originTuningId, tunings.all.single.id);
+  });
+
+  testWidgets('désactive les actions pendant l’enregistrement d’un accord', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final innerTunings = InMemoryTuningRepository();
+    final gate = Completer<void>();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        tunings: innerTunings,
+        recordTuning: RecordTuning(
+          clock: FixedClock(_now),
+          idGenerator: FakeIdGenerator(spareIds()),
+          transactions: const ImmediateTransactionRunner(),
+          tunings: _DelayedInsertTuningRepository(innerTunings, gate),
+          pianos: pianos,
+          reminders: InMemoryReminderRepository(),
+          activities: InMemoryActivityRepository(pianos),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(_recordTuningOnCard('Yamaha U1'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsRecordTuningSave),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.widgetWithText(
+                FilledButton,
+                clientsRecordTuningSave,
+              ),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<TextButton>(
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.widgetWithText(TextButton, clientsCancel),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text(_lastTuningLabel(_today)), findsOneWidget);
+  });
+
+  testWidgets('présente une erreur RecordTuning sans détail technique', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(
+      _piano(
+        id: '11111111-1111-4111-8111-111111111111',
+        customerId: dupont.id,
+        brand: 'Yamaha',
+        model: 'U1',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        recordTuning: RecordTuning(
+          clock: FixedClock(_now),
+          idGenerator: FakeIdGenerator(spareIds()),
+          transactions: const ImmediateTransactionRunner(),
+          tunings: _FailingInsertTuningRepository(),
+          pianos: pianos,
+          reminders: InMemoryReminderRepository(),
+          activities: InMemoryActivityRepository(pianos),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(_recordTuningOnCard('Yamaha U1'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsRecordTuningSave),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsRecordTuningGenericError), findsOneWidget);
+    expect(find.textContaining('SQLite'), findsNothing);
+    expect(find.textContaining('Exception'), findsNothing);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('présente PianoNotFound sans détail technique', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(
+      _piano(
+        id: '11111111-1111-4111-8111-111111111111',
+        customerId: dupont.id,
+        brand: 'Yamaha',
+        model: 'U1',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        recordTuning: RecordTuning(
+          clock: FixedClock(_now),
+          idGenerator: FakeIdGenerator(spareIds()),
+          transactions: const ImmediateTransactionRunner(),
+          tunings: InMemoryTuningRepository(),
+          pianos: InMemoryPianoRepository(),
+          reminders: InMemoryReminderRepository(),
+          activities: InMemoryActivityRepository(InMemoryPianoRepository()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(_recordTuningOnCard('Yamaha U1'));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsRecordTuningSave),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsPianoNotFound), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('le dialog d’accord n’overflow pas à 900×700', (tester) async {
+    await _prepareDesktop(tester, size: const Size(900, 700));
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(
+      _piano(
+        id: '11111111-1111-4111-8111-111111111111',
+        customerId: dupont.id,
+        brand: 'Yamaha',
+        model: 'U1',
+      ),
+    );
+    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(_recordTuningOnCard('Yamaha U1'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(_recordTuningDialogTitle(), findsOneWidget);
+  });
+
   test('les dialogs clients passent par CustomerService', () {
     const files = [
       'lib/presentation/clients/customer_form_dialog.dart',
@@ -1725,6 +2353,24 @@ void main() {
     ).readAsStringSync();
     expect(pianoForm.contains('pianoServiceProvider'), isTrue);
     expect(pianoConfirm.contains('pianoServiceProvider'), isTrue);
+
+    final recordDialog = File(
+      'lib/presentation/clients/record_tuning_dialog.dart',
+    ).readAsStringSync();
+    expect(recordDialog.contains('recordTuningProvider'), isTrue);
+    expect(recordDialog.contains('tuningRepositoryProvider'), isFalse);
+    expect(recordDialog.contains('reminderRepositoryProvider'), isFalse);
+    expect(recordDialog.contains('activityRepositoryProvider'), isFalse);
+    expect(recordDialog.contains('app_database'), isFalse);
+    expect(recordDialog.contains('dueDate'), isFalse);
+    expect(recordDialog.contains('DateTime.now()'), isFalse);
+
+    final detail = File(
+      'lib/presentation/clients/client_detail_pane.dart',
+    ).readAsStringSync();
+    expect(detail.contains('selectedCustomerLatestTuningDatesProvider'), isTrue);
+    expect(detail.contains('dashboardSnapshotProvider'), isTrue);
+    expect(detail.contains('tuningRepositoryProvider'), isFalse);
   });
 }
 
@@ -1820,4 +2466,44 @@ final class _FailingInsertPianoRepository implements PianoRepository {
   }) async {
     return const [];
   }
+}
+
+final class _DelayedInsertTuningRepository implements TuningRepository {
+  _DelayedInsertTuningRepository(this._inner, this._insertGate);
+
+  final InMemoryTuningRepository _inner;
+  final Completer<void> _insertGate;
+
+  @override
+  Future<Tuning?> findById(TuningId id) => _inner.findById(id);
+
+  @override
+  Future<void> insert(Tuning tuning) async {
+    await _insertGate.future;
+    await _inner.insert(tuning);
+  }
+
+  @override
+  Future<void> update(Tuning tuning) => _inner.update(tuning);
+
+  @override
+  Future<List<Tuning>> findByPianoId(PianoId pianoId) {
+    return _inner.findByPianoId(pianoId);
+  }
+}
+
+final class _FailingInsertTuningRepository implements TuningRepository {
+  @override
+  Future<Tuning?> findById(TuningId id) async => null;
+
+  @override
+  Future<void> insert(Tuning tuning) async {
+    throw Exception('SQLite constraint failed');
+  }
+
+  @override
+  Future<void> update(Tuning tuning) async {}
+
+  @override
+  Future<List<Tuning>> findByPianoId(PianoId pianoId) async => const [];
 }

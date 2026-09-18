@@ -5,12 +5,15 @@ import '../../application/dashboard/dashboard_display_names.dart';
 import '../../domain/customer/civility.dart';
 import '../../domain/customer/customer.dart';
 import '../../domain/piano/piano.dart';
+import '../../domain/shared/calendar_date.dart';
+import '../app_providers.dart';
 import '../theme/app_colors.dart';
 import 'clients_providers.dart';
 import 'clients_strings.dart';
 import 'piano_confirm_dialog.dart';
 import 'piano_form_dialog.dart';
 import 'piano_summary_card.dart';
+import 'record_tuning_dialog.dart';
 
 class ClientDetailPane extends ConsumerWidget {
   const ClientDetailPane({
@@ -38,6 +41,9 @@ class ClientDetailPane extends ConsumerWidget {
       null => null,
     };
     final pianosAsync = ref.watch(selectedCustomerPianosProvider);
+    final latestDates =
+        ref.watch(selectedCustomerLatestTuningDatesProvider).value ??
+        const <PianoId, CalendarDate>{};
 
     return CustomScrollView(
       slivers: [
@@ -102,7 +108,7 @@ class ClientDetailPane extends ConsumerWidget {
               ),
             ),
           ],
-          data: (pianos) => _pianoSlivers(context, ref, pianos),
+          data: (pianos) => _pianoSlivers(context, ref, pianos, latestDates),
         ),
       ],
     );
@@ -214,10 +220,31 @@ class ClientDetailPane extends ConsumerWidget {
     ref.invalidate(selectedCustomerPianosProvider);
   }
 
+  Future<void> _recordTuning(
+    BuildContext context,
+    WidgetRef ref,
+    Piano piano,
+  ) async {
+    if (customer.isArchived || piano.isArchived) {
+      return;
+    }
+    final recorded = await showRecordTuningDialog(
+      context: context,
+      ref: ref,
+      pianoId: piano.id,
+    );
+    if (!context.mounted || !recorded) {
+      return;
+    }
+    ref.invalidate(selectedCustomerLatestTuningDatesProvider);
+    ref.invalidate(dashboardSnapshotProvider);
+  }
+
   List<Widget> _pianoSlivers(
     BuildContext context,
     WidgetRef ref,
     SelectedCustomerPianos pianos,
+    Map<PianoId, CalendarDate> latestDates,
   ) {
     return [
       SliverPadding(
@@ -270,6 +297,10 @@ class ClientDetailPane extends ConsumerWidget {
               final piano = pianos.active[index];
               return PianoSummaryCard(
                 piano: piano,
+                lastTuningDate: latestDates[piano.id],
+                onRecordTuning: customer.isArchived
+                    ? null
+                    : () => _recordTuning(context, ref, piano),
                 onEdit: customer.isArchived
                     ? null
                     : () => _editPiano(context, ref, piano),
@@ -297,6 +328,7 @@ class ClientDetailPane extends ConsumerWidget {
                   PianoSummaryCard(
                     piano: pianos.archived[i],
                     muted: true,
+                    lastTuningDate: latestDates[pianos.archived[i].id],
                     onRestore: customer.isArchived
                         ? null
                         : () => _restorePiano(context, ref, pianos.archived[i]),

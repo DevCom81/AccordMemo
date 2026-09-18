@@ -51,6 +51,12 @@ String formatFrenchShortDate(CalendarDate date) {
   return '${date.day} ${_shortMonths[date.month - 1]} ${date.year}';
 }
 
+String formatFrenchNumericDate(CalendarDate date) {
+  final day = date.day.toString().padLeft(2, '0');
+  final month = date.month.toString().padLeft(2, '0');
+  return '$day/$month/${date.year}';
+}
+
 String formatDueRelative({
   required CalendarDate today,
   required CalendarDate dueDate,

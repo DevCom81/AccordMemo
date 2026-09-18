@@ -6,6 +6,7 @@ import '../../domain/customer/customer.dart';
 import '../../domain/customer/customer_repository.dart';
 import '../../domain/piano/piano.dart';
 import '../../domain/piano/piano_repository.dart';
+import '../../domain/shared/calendar_date.dart';
 import '../app_providers.dart';
 
 const clientsSearchDebounce = Duration(milliseconds: 300);
@@ -47,6 +48,17 @@ final selectedCustomerPianosProvider = FutureProvider<SelectedCustomerPianos>((
   );
   return SelectedCustomerPianos(active: active, archived: archived);
 });
+
+final selectedCustomerLatestTuningDatesProvider =
+    FutureProvider<Map<PianoId, CalendarDate>>((ref) async {
+      final id = ref.watch(selectedCustomerIdProvider);
+      if (id == null) {
+        return const {};
+      }
+      return ref
+          .watch(latestPianoTuningQueryProvider)
+          .findLatestDatesByCustomerId(id);
+    });
 
 final class ClientsFilter extends Notifier<CustomerStatusFilter> {
   @override

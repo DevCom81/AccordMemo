@@ -5,6 +5,8 @@ import 'package:accord_memo/domain/tuning/tuning_repository.dart';
 final class InMemoryTuningRepository implements TuningRepository {
   final Map<String, Tuning> _tunings = {};
 
+  Iterable<Tuning> get all => _tunings.values;
+
   @override
   Future<Tuning?> findById(TuningId id) async {
     return _tunings[id.value];
