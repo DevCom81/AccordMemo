@@ -5,6 +5,8 @@ import '../app_providers.dart';
 import '../clients/clients_page.dart';
 import '../dashboard/dashboard_page.dart';
 import '../dev/demo_mode.dart';
+import '../history/history_page.dart';
+import '../history/history_providers.dart';
 import '../placeholders/coming_soon_page.dart';
 import '../theme/app_colors.dart';
 import 'app_destinations.dart';
@@ -23,6 +25,10 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (destination == AppDestination.today &&
         _destination != AppDestination.today) {
       ref.invalidate(dashboardSnapshotProvider);
+    }
+    if (destination == AppDestination.history &&
+        _destination != AppDestination.history) {
+      ref.invalidate(historySnapshotProvider);
     }
     setState(() {
       _destination = destination;
@@ -56,7 +62,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                     onSeeAllClients: () => _select(AppDestination.clients),
                   ),
                   const ClientsPage(),
-                  const ComingSoonPage(title: 'Historique'),
+                  const HistoryPage(),
                   const ComingSoonPage(title: 'Paramètres'),
                 ],
               ),

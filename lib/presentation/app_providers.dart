@@ -4,6 +4,7 @@ import '../application/customer/customer_service.dart';
 import '../application/dashboard/dashboard_reminder_query.dart';
 import '../application/dashboard/dashboard_service.dart';
 import '../application/dashboard/dashboard_snapshot.dart';
+import '../application/history/history_query.dart';
 import '../application/piano/piano_service.dart';
 import '../application/ports/id_generator.dart';
 import '../application/ports/transaction_runner.dart';
@@ -23,6 +24,7 @@ import '../infrastructure/persistence/app_database.dart';
 import '../infrastructure/persistence/drift_activity_repository.dart';
 import '../infrastructure/persistence/drift_customer_repository.dart';
 import '../infrastructure/persistence/drift_dashboard_reminder_query.dart';
+import '../infrastructure/persistence/drift_history_query.dart';
 import '../infrastructure/persistence/drift_latest_piano_tuning_query.dart';
 import '../infrastructure/persistence/drift_piano_repository.dart';
 import '../infrastructure/persistence/drift_reminder_repository.dart';
@@ -149,4 +151,8 @@ final dashboardServiceProvider = Provider<DashboardService>((ref) {
 
 final dashboardSnapshotProvider = FutureProvider<DashboardSnapshot>((ref) {
   return ref.watch(dashboardServiceProvider).load();
+});
+
+final historyQueryProvider = Provider<HistoryQuery>((ref) {
+  return DriftHistoryQuery(ref.watch(appDatabaseProvider));
 });

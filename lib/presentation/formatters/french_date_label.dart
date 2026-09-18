@@ -57,6 +57,21 @@ String formatFrenchNumericDate(CalendarDate date) {
   return '$day/$month/${date.year}';
 }
 
+String formatFrenchDateTime(DateTime instant) {
+  final local = instant.toLocal();
+  final date = CalendarDate.fromLocalInstant(local);
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '${formatFrenchNumericDate(date)} $hour:$minute';
+}
+
+String formatFrenchDateRange({
+  required CalendarDate from,
+  required CalendarDate to,
+}) {
+  return '${formatFrenchNumericDate(from)} → ${formatFrenchNumericDate(to)}';
+}
+
 String formatDueRelative({
   required CalendarDate today,
   required CalendarDate dueDate,

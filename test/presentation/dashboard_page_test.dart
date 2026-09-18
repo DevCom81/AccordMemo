@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:accord_memo/application/dashboard/dashboard_reminder.dart';
 import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
+import 'package:accord_memo/application/history/history_entry.dart';
 import 'package:accord_memo/application/reminder/reminder_service.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/piano/piano.dart';
@@ -12,6 +13,7 @@ import 'package:accord_memo/domain/tuning/tuning.dart';
 import 'package:accord_memo/presentation/app_providers.dart';
 import 'package:accord_memo/presentation/dashboard/dashboard_page.dart';
 import 'package:accord_memo/presentation/dashboard/dashboard_strings.dart';
+import 'package:accord_memo/presentation/history/history_providers.dart';
 import 'package:accord_memo/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,12 +64,16 @@ DashboardSnapshot _snapshot({
 
 Widget _dashboardApp({
   required Future<DashboardSnapshot> Function() loadSnapshot,
+  Future<List<HistoryEntry>> Function()? loadHistory,
   ReminderService? reminderService,
   VoidCallback? onSeeAllClients,
 }) {
   return ProviderScope(
     overrides: [
       dashboardSnapshotProvider.overrideWith((ref) => loadSnapshot()),
+      historySnapshotProvider.overrideWith((ref) {
+        return loadHistory?.call() ?? Future.value(const <HistoryEntry>[]);
+      }),
       if (reminderService != null)
         reminderServiceProvider.overrideWith((ref) => reminderService),
     ],
@@ -272,5 +278,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('invalide l’historique après un report de rappel', (tester) async {
+    await prepareDesktopSurface(tester);
+
+    final pianos = InMemoryPianoRepository();
+    final reminders = InMemoryReminderRepository();
+    final activities = InMemoryActivityRepository(pianos);
+    final reminder = Reminder.schedule(
+      id: ReminderId('reminder-1'),
+      pianoId: PianoId('piano-1'),
+      originTuningId: TuningId('tuning-1'),
+      dueDate: today.addDays(-14),
+      now: DateTime.utc(2026, 9, 17, 10),
+    );
+    await reminders.insert(reminder);
+    var historyLoads = 0;
+    var dashboardLoads = 0;
+
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          dashboardLoads += 1;
+          return _snapshot(
+            overdue: [_reminder(dueDate: today.addDays(-14))],
+          );
+        },
+        loadHistory: () async {
+          historyLoads += 1;
+          return const <HistoryEntry>[];
+        },
+        reminderService: ReminderService(
+          clock: FixedClock(DateTime.utc(2026, 9, 17, 10)),
+          idGenerator: FakeIdGenerator(spareIds()),
+          transactions: const ImmediateTransactionRunner(),
+          reminders: reminders,
+          activities: activities,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DashboardPage)),
+    );
+    container.listen(
+      historySnapshotProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    await tester.pumpAndSettle();
+    expect(historyLoads, 1);
+    expect(dashboardLoads, 1);
+
+    await tester.tap(find.text('Reporter'));
+    await tester.pumpAndSettle();
+    expect(find.text('Reporter le rappel'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Enregistrer'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(historyLoads, 2);
+    expect(dashboardLoads, 2);
+    expect((await reminders.findById(reminder.id))!.dueDate, today);
   });
 }

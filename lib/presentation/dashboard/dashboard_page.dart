@@ -7,6 +7,7 @@ import '../../application/dashboard/dashboard_snapshot.dart';
 import '../../domain/shared/calendar_date.dart';
 import '../app_providers.dart';
 import '../formatters/french_date_label.dart';
+import '../history/history_providers.dart';
 import '../theme/app_colors.dart';
 import 'dashboard_reminder_card.dart';
 import 'dashboard_strings.dart';
@@ -56,6 +57,7 @@ class DashboardPage extends ConsumerWidget {
           );
           if (saved) {
             ref.invalidate(dashboardSnapshotProvider);
+            ref.invalidate(historySnapshotProvider);
           }
         },
       ),

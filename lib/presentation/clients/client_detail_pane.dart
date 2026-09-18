@@ -7,6 +7,7 @@ import '../../domain/customer/customer.dart';
 import '../../domain/piano/piano.dart';
 import '../../domain/shared/calendar_date.dart';
 import '../app_providers.dart';
+import '../history/history_providers.dart';
 import '../theme/app_colors.dart';
 import 'clients_providers.dart';
 import 'clients_strings.dart';
@@ -180,6 +181,9 @@ class ClientDetailPane extends ConsumerWidget {
       return;
     }
     ref.invalidate(selectedCustomerPianosProvider);
+    if (piano.remindersEnabled != updated.remindersEnabled) {
+      ref.invalidate(historySnapshotProvider);
+    }
   }
 
   Future<void> _archivePiano(
@@ -238,6 +242,7 @@ class ClientDetailPane extends ConsumerWidget {
     }
     ref.invalidate(selectedCustomerLatestTuningDatesProvider);
     ref.invalidate(dashboardSnapshotProvider);
+    ref.invalidate(historySnapshotProvider);
   }
 
   List<Widget> _pianoSlivers(

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:accord_memo/application/customer/customer_service.dart';
 import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
+import 'package:accord_memo/application/history/history_entry.dart';
 import 'package:accord_memo/application/piano/piano_service.dart';
 import 'package:accord_memo/application/tuning/record_tuning.dart';
 import 'package:accord_memo/domain/customer/civility.dart';
@@ -24,6 +25,7 @@ import 'package:accord_memo/presentation/clients/clients_providers.dart';
 import 'package:accord_memo/presentation/clients/clients_strings.dart';
 import 'package:accord_memo/presentation/clients/piano_summary_card.dart';
 import 'package:accord_memo/presentation/formatters/french_date_label.dart';
+import 'package:accord_memo/presentation/history/history_providers.dart';
 import 'package:accord_memo/presentation/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -147,6 +149,7 @@ Widget _clientsApp({
   InMemoryTuningRepository? tunings,
   RecordTuning? recordTuning,
   Future<DashboardSnapshot> Function()? loadDashboard,
+  Future<List<HistoryEntry>> Function()? loadHistory,
 }) {
   final pianoRepo = pianos ?? InMemoryPianoRepository();
   final reminderRepo = reminders ?? InMemoryReminderRepository();
@@ -186,6 +189,9 @@ Widget _clientsApp({
       ),
       dashboardSnapshotProvider.overrideWith((ref) {
         return loadDashboard?.call() ?? Future.value(_emptyDashboard);
+      }),
+      historySnapshotProvider.overrideWith((ref) {
+        return loadHistory?.call() ?? Future.value(const <HistoryEntry>[]);
       }),
     ],
     child: MaterialApp(
@@ -964,6 +970,7 @@ void main() {
   ) async {
     await _prepareDesktop(tester);
     final customers = InMemoryCustomerRepository();
+    var historyLoads = 0;
     final dupont = _customer(
       id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       lastName: 'Dupont',
@@ -971,10 +978,28 @@ void main() {
     );
     await customers.insert(dupont);
 
-    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        loadHistory: () async {
+          historyLoads += 1;
+          return const <HistoryEntry>[];
+        },
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Jean Dupont'));
     await tester.pumpAndSettle();
+    final archiveContainer = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    archiveContainer.listen(
+      historySnapshotProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    await tester.pumpAndSettle();
+    expect(historyLoads, 1);
     await tester.tap(find.text(clientsArchiveAction));
     await tester.pumpAndSettle();
 
@@ -1004,6 +1029,7 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.text('Jean Dupont'), findsNothing);
     expect((await customers.findById(dupont.id))!.isArchived, isTrue);
+    expect(historyLoads, 2);
 
     final container = ProviderScope.containerOf(
       tester.element(find.byType(ClientsPage)),
@@ -1316,10 +1342,30 @@ void main() {
     await customers.insert(dupont);
     await pianos.insert(yamaha);
 
-    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    var historyLoads = 0;
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        loadHistory: () async {
+          historyLoads += 1;
+          return const <HistoryEntry>[];
+        },
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Jean Dupont'));
     await tester.pumpAndSettle();
+    final locationContainer = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    locationContainer.listen(
+      historySnapshotProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    await tester.pumpAndSettle();
+    expect(historyLoads, 1);
     await tester.tap(
       find.descendant(
         of: _pianoCard('Yamaha U1'),
@@ -1372,6 +1418,7 @@ void main() {
     final updated = await pianos.findById(yamaha.id);
     expect(updated!.location, 'Cuisine');
     expect(updated.customerId, dupont.id);
+    expect(historyLoads, 1);
 
     final container = ProviderScope.containerOf(
       tester.element(find.byType(ClientsPage)),
@@ -1585,6 +1632,7 @@ void main() {
     await _prepareDesktop(tester);
     final customers = InMemoryCustomerRepository();
     final pianos = InMemoryPianoRepository();
+    var historyLoads = 0;
     final dupont = _customer(
       id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       lastName: 'Dupont',
@@ -1599,10 +1647,29 @@ void main() {
     await customers.insert(dupont);
     await pianos.insert(yamaha);
 
-    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        loadHistory: () async {
+          historyLoads += 1;
+          return const <HistoryEntry>[];
+        },
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Jean Dupont'));
     await tester.pumpAndSettle();
+    final disableContainer = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    disableContainer.listen(
+      historySnapshotProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    await tester.pumpAndSettle();
+    expect(historyLoads, 1);
     await tester.tap(
       find.descendant(
         of: _pianoCard('Yamaha U1'),
@@ -1651,6 +1718,7 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect((await pianos.findById(yamaha.id))!.remindersEnabled, isFalse);
     expect(find.text(clientsRemindersDisabled), findsOneWidget);
+    expect(historyLoads, 2);
   });
 
   testWidgets('réactiver les rappels n’ouvre pas de confirmation ni de rappel', (
@@ -1675,12 +1743,31 @@ void main() {
     await customers.insert(dupont);
     await pianos.insert(yamaha);
 
+    var historyLoads = 0;
     await tester.pumpWidget(
-      _clientsApp(customers: customers, pianos: pianos, reminders: reminders),
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        reminders: reminders,
+        loadHistory: () async {
+          historyLoads += 1;
+          return const <HistoryEntry>[];
+        },
+      ),
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Jean Dupont'));
     await tester.pumpAndSettle();
+    final enableContainer = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    enableContainer.listen(
+      historySnapshotProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    await tester.pumpAndSettle();
+    expect(historyLoads, 1);
     await tester.tap(
       find.descendant(
         of: _pianoCard('Yamaha U1'),
@@ -1705,6 +1792,7 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect((await pianos.findById(yamaha.id))!.remindersEnabled, isTrue);
     expect(await reminders.findScheduledByPianoId(yamaha.id), isNull);
+    expect(historyLoads, 2);
   });
 
   testWidgets('présente une erreur de mutation piano sans détail technique', (
@@ -1898,6 +1986,7 @@ void main() {
       final reminders = InMemoryReminderRepository();
       final tunings = InMemoryTuningRepository();
       var dashboardLoads = 0;
+      var historyLoads = 0;
       final dupont = _customer(
         id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
         lastName: 'Dupont',
@@ -1922,6 +2011,10 @@ void main() {
             dashboardLoads += 1;
             return _emptyDashboard;
           },
+          loadHistory: () async {
+            historyLoads += 1;
+            return const <HistoryEntry>[];
+          },
         ),
       );
       await tester.pumpAndSettle();
@@ -1936,8 +2029,14 @@ void main() {
         (_, _) {},
         fireImmediately: true,
       );
+      container.listen(
+        historySnapshotProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
       await tester.pumpAndSettle();
       expect(dashboardLoads, 1);
+      expect(historyLoads, 1);
       final pianoValue = container.read(selectedCustomerPianosProvider).value;
       final searchValue = container.read(clientsSearchProvider).value;
 
@@ -1963,6 +2062,7 @@ void main() {
       expect(reminder!.dueDate, _today.addMonths(12));
       expect(reminder.status, ReminderStatus.scheduled);
       expect(dashboardLoads, 2);
+      expect(historyLoads, 2);
       expect(
         identical(
           container.read(selectedCustomerPianosProvider).value,
@@ -2370,7 +2470,13 @@ void main() {
     ).readAsStringSync();
     expect(detail.contains('selectedCustomerLatestTuningDatesProvider'), isTrue);
     expect(detail.contains('dashboardSnapshotProvider'), isTrue);
+    expect(detail.contains('historySnapshotProvider'), isTrue);
     expect(detail.contains('tuningRepositoryProvider'), isFalse);
+
+    final clientsPage = File(
+      'lib/presentation/clients/clients_page.dart',
+    ).readAsStringSync();
+    expect(clientsPage.contains('historySnapshotProvider'), isTrue);
   });
 }
 

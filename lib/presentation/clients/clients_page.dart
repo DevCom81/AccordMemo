@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/dashboard/dashboard_display_names.dart';
 import '../../domain/customer/customer.dart';
 import '../../domain/customer/customer_repository.dart';
+import '../history/history_providers.dart';
 import '../theme/app_colors.dart';
 import 'client_detail_pane.dart';
 import 'clients_providers.dart';
@@ -71,6 +72,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
       return;
     }
     ref.invalidate(clientsSearchProvider);
+    ref.invalidate(historySnapshotProvider);
   }
 
   Future<void> _restoreCustomer(Customer customer) async {
