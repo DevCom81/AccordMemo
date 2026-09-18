@@ -1,6 +1,8 @@
 const sendReminderComingSoonMessage =
     'L’envoi d’e-mail sera disponible prochainement.';
 
+const dashboardHeroTitle = 'Relance prioritaire';
+
 const dashboardEmptyTitle = 'Tout est à jour.';
 
 const dashboardEmptyBody =

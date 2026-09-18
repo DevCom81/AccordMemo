@@ -215,7 +215,7 @@ class _DashboardBody extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(40, 0, 40, 8),
         sliver: SliverList.separated(
           itemCount: items.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 10),
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final reminder = items[index];
             return DashboardReminderCard(
@@ -290,21 +290,22 @@ class _NextDueHero extends StatelessWidget {
       model: reminder.model,
       type: reminder.type,
     );
-    final subtitle = [
-      if (piano.isNotEmpty) piano,
-      if (reminder.city != null) reminder.city!,
-    ].join(', ');
+    final city = reminder.city;
     final days = today.daysUntil(reminder.dueDate);
     final absDays = days < 0 ? -days : days;
     final caption = days < 0
         ? (absDays <= 1 ? 'jour de retard' : 'jours de retard')
         : (absDays <= 1 ? 'jour' : 'jours');
+    final semanticsDetails = [
+      piano,
+      ?city,
+    ].where((part) => part.isNotEmpty).join('. ');
 
     return Semantics(
-      label: 'Prochaine échéance : $name. $subtitle. $absDays $caption',
+      label: '$dashboardHeroTitle : $name. $semanticsDetails. $absDays $caption',
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: AppColors.dueSoonFill,
+          color: days < 0 ? AppColors.overdueFill : AppColors.dueSoonFill,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.line),
         ),
@@ -319,17 +320,21 @@ class _NextDueHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'PROCHAINE ÉCHÉANCE',
+                      dashboardHeroTitle.toUpperCase(),
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: AppColors.muted,
                         letterSpacing: 0.6,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitle.isEmpty ? name : '$name — $subtitle',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+                    Text(name, style: Theme.of(context).textTheme.titleMedium),
+                    if (piano.isNotEmpty)
+                      Text(piano, style: Theme.of(context).textTheme.bodyLarge),
+                    if (city != null)
+                      Text(
+                        city,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                   ],
                 ),
               ),

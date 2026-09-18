@@ -9,6 +9,8 @@ import 'dashboard_strings.dart';
 
 enum DashboardReminderBucket { overdue, dueSoon, upcoming }
 
+const _cardCompactBreakpoint = 680.0;
+
 class DashboardReminderCard extends StatelessWidget {
   const DashboardReminderCard({
     super.key,
@@ -34,11 +36,8 @@ class DashboardReminderCard extends StatelessWidget {
       model: reminder.model,
       type: reminder.type,
     );
-    final details = [
-      if (piano.isNotEmpty) piano,
-      if (reminder.city != null) reminder.city!,
-    ].join(' — ');
-    final badge = switch (bucket) {
+    final city = reminder.city;
+    final statusLabel = switch (bucket) {
       DashboardReminderBucket.overdue => 'En retard',
       DashboardReminderBucket.dueSoon => 'À traiter',
       DashboardReminderBucket.upcoming => 'À venir',
@@ -48,118 +47,191 @@ class DashboardReminderCard extends StatelessWidget {
       DashboardReminderBucket.dueSoon => AppColors.dueSoonFill,
       DashboardReminderBucket.upcoming => AppColors.card,
     };
-    final badgeColor = switch (bucket) {
+    final dueColor = switch (bucket) {
       DashboardReminderBucket.overdue => AppColors.copperDark,
       DashboardReminderBucket.dueSoon => AppColors.copper,
       DashboardReminderBucket.upcoming => AppColors.forestMid,
     };
+    final dueRelative = formatDueRelative(today: today, dueDate: reminder.dueDate);
+    final dueDateLabel = formatFrenchShortDate(reminder.dueDate);
+    final semanticsDetails = [
+      piano,
+      ?city,
+    ].where((part) => part.isNotEmpty).join('. ');
+
+    final avatar = _InitialsAvatar(
+      initials: dashboardCustomerInitials(
+        lastName: reminder.lastName,
+        firstName: reminder.firstName,
+      ),
+    );
+    final identity = _IdentityColumn(name: name, piano: piano, city: city);
+    final due = _DueColumn(
+      dateLabel: dueDateLabel,
+      relativeLabel: dueRelative,
+      dueColor: dueColor,
+    );
+    final actions = _ActionColumn(onReschedule: onReschedule);
 
     return Semantics(
       container: true,
-      label: '$name. $details. ${formatFrenchShortDate(reminder.dueDate)}. $badge. ${formatDueRelative(today: today, dueDate: reminder.dueDate)}',
+      label: '$name. $semanticsDetails. $dueDateLabel. $statusLabel. $dueRelative',
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: fill,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.line),
         ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _InitialsAvatar(
-                initials: dashboardCustomerInitials(
-                  lastName: reminder.lastName,
-                  firstName: reminder.firstName,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < _cardCompactBreakpoint;
+            if (compact) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(name, style: Theme.of(context).textTheme.titleMedium),
-                    if (details.isNotEmpty)
-                      Text(details, style: Theme.of(context).textTheme.bodyMedium),
-                    Text(
-                      formatDueRelative(today: today, dueDate: reminder.dueDate),
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Flexible(
-                child: Wrap(
-                  alignment: WrapAlignment.end,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 10,
-                  runSpacing: 8,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'Échéance',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        Text(
-                          formatFrenchShortDate(reminder.dueDate),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: badgeColor,
-                          ),
-                        ),
+                        avatar,
+                        const SizedBox(width: 16),
+                        Expanded(child: identity),
                       ],
                     ),
-                    _StatusBadge(label: badge, color: badgeColor),
-                    Tooltip(
-                      message: sendReminderComingSoonMessage,
-                      child: Semantics(
-                        button: true,
-                        enabled: false,
-                        label: 'Envoyer le rappel',
-                        hint: sendReminderComingSoonMessage,
-                        child: const FilledButton(
-                          onPressed: null,
-                          child: Text('Envoyer le rappel'),
-                        ),
-                      ),
-                    ),
-                    OutlinedButton(
-                      onPressed: onReschedule,
-                      child: const Text('Reporter'),
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(child: due),
+                        const SizedBox(width: 12),
+                        actions,
+                      ],
                     ),
                   ],
                 ),
+              );
+            }
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  avatar,
+                  const SizedBox(width: 16),
+                  Expanded(child: identity),
+                  const SizedBox(width: 12),
+                  due,
+                  const SizedBox(width: 16),
+                  actions,
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.label, required this.color});
+class _IdentityColumn extends StatelessWidget {
+  const _IdentityColumn({
+    required this.name,
+    required this.piano,
+    required this.city,
+  });
 
-  final String label;
-  final Color color;
+  final String name;
+  final String piano;
+  final String? city;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(color: color),
+    final cityLabel = city;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(name, style: Theme.of(context).textTheme.titleMedium),
+        if (piano.isNotEmpty)
+          Text(piano, style: Theme.of(context).textTheme.bodyLarge),
+        if (cityLabel != null)
+          Text(cityLabel, style: Theme.of(context).textTheme.bodyMedium),
+      ],
+    );
+  }
+}
+
+class _DueColumn extends StatelessWidget {
+  const _DueColumn({
+    required this.dateLabel,
+    required this.relativeLabel,
+    required this.dueColor,
+  });
+
+  final String dateLabel;
+  final String relativeLabel;
+  final Color dueColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text('Échéance', style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          dateLabel,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: dueColor,
+          ),
         ),
+        Text(relativeLabel, style: Theme.of(context).textTheme.bodyMedium),
+      ],
+    );
+  }
+}
+
+class _ActionColumn extends StatelessWidget {
+  const _ActionColumn({required this.onReschedule});
+
+  final VoidCallback onReschedule;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicWidth(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Tooltip(
+            message: sendReminderComingSoonMessage,
+            child: Semantics(
+              button: true,
+              enabled: false,
+              label: 'Envoyer le rappel',
+              hint: sendReminderComingSoonMessage,
+              child: FilledButton(
+                onPressed: null,
+                style: FilledButton.styleFrom(
+                  disabledBackgroundColor: AppColors.copper.withValues(
+                    alpha: 0.58,
+                  ),
+                  disabledForegroundColor: Colors.white.withValues(alpha: 0.88),
+                  minimumSize: const Size(0, 40),
+                  disabledMouseCursor: SystemMouseCursors.forbidden,
+                ),
+                child: const Text('Envoyer le rappel'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: onReschedule,
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 40),
+            ),
+            child: const Text('Reporter'),
+          ),
+        ],
       ),
     );
   }
@@ -174,7 +246,7 @@ class _InitialsAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return ExcludeSemantics(
       child: CircleAvatar(
-        radius: 22,
+        radius: 24,
         backgroundColor: AppColors.overdueFill,
         foregroundColor: AppColors.copperDark,
         child: Text(

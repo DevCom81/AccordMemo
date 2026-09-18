@@ -27,17 +27,23 @@ import '../support/in_memory_reminder_repository.dart';
 DashboardReminder _reminder({
   required CalendarDate dueDate,
   String id = 'reminder-1',
+  String pianoId = 'piano-1',
+  String lastName = 'Dupont',
+  String? firstName = 'Jean',
+  String? city = 'Toulouse',
+  String? brand = 'Yamaha',
+  String? model = 'U1',
 }) {
   return DashboardReminder(
     reminderId: ReminderId(id),
-    pianoId: PianoId('piano-1'),
+    pianoId: PianoId(pianoId),
     customerId: CustomerId('customer-1'),
     dueDate: dueDate,
-    lastName: 'Dupont',
-    firstName: 'Jean',
-    city: 'Toulouse',
-    brand: 'Yamaha',
-    model: 'U1',
+    lastName: lastName,
+    firstName: firstName,
+    city: city,
+    brand: brand,
+    model: model,
   );
 }
 
@@ -154,5 +160,117 @@ void main() {
 
     expect((await reminders.findById(reminder.id))!.status, ReminderStatus.scheduled);
     expect(await activities.findRecent(limit: 10), isEmpty);
+  });
+
+  testWidgets('affiche Relance prioritaire pour un rappel en retard', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            overdue: [_reminder(dueDate: today.addDays(-14))],
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(dashboardHeroTitle.toUpperCase()), findsOneWidget);
+    expect(find.text('14 jours de retard'), findsWidgets);
+  });
+
+  testWidgets('distingue deux pianos du même client', (tester) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            overdue: [
+              _reminder(
+                id: 'reminder-kawai',
+                pianoId: 'piano-kawai',
+                dueDate: today.addDays(-3),
+                lastName: 'École Sainte-Cécile',
+                firstName: null,
+                city: 'Montpellier',
+                brand: 'Kawai',
+                model: 'K300',
+              ),
+              _reminder(
+                id: 'reminder-yamaha',
+                pianoId: 'piano-yamaha',
+                dueDate: today.addDays(-1),
+                lastName: 'École Sainte-Cécile',
+                firstName: null,
+                city: 'Montpellier',
+                brand: 'Yamaha',
+                model: 'C3',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kawai K300'), findsWidgets);
+    expect(find.text('Yamaha C3'), findsOneWidget);
+    expect(find.text('École Sainte-Cécile'), findsWidgets);
+  });
+
+  testWidgets('ne répète pas le badge En retard dans les cartes', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            overdue: [
+              _reminder(id: 'overdue-1', dueDate: today.addDays(-14)),
+              _reminder(
+                id: 'overdue-2',
+                pianoId: 'piano-2',
+                dueDate: today.addDays(-3),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('EN RETARD'), findsOneWidget);
+    expect(find.text('En retard'), findsOneWidget);
+  });
+
+  testWidgets('n’overflow pas à 900×700', (tester) async {
+    tester.view.physicalSize = const Size(900, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      _dashboardApp(
+        loadSnapshot: () async {
+          return _snapshot(
+            overdue: [_reminder(dueDate: today.addDays(-14))],
+            dueSoon: [_reminder(id: 'soon', pianoId: 'piano-soon', dueDate: today)],
+            upcoming: [
+              _reminder(
+                id: 'later',
+                pianoId: 'piano-later',
+                dueDate: today.addDays(12),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
   });
 }
