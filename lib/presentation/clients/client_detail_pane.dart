@@ -10,9 +10,18 @@ import 'clients_strings.dart';
 import 'piano_summary_card.dart';
 
 class ClientDetailPane extends ConsumerWidget {
-  const ClientDetailPane({super.key, required this.customer});
+  const ClientDetailPane({
+    super.key,
+    required this.customer,
+    required this.onEdit,
+    required this.onArchive,
+    required this.onRestore,
+  });
 
   final Customer customer;
+  final VoidCallback onEdit;
+  final VoidCallback onArchive;
+  final VoidCallback onRestore;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -42,6 +51,13 @@ class ClientDetailPane extends ConsumerWidget {
                 if (civility != null)
                   Text(civility, style: Theme.of(context).textTheme.bodyMedium),
                 Text(name, style: Theme.of(context).textTheme.headlineLarge),
+                const SizedBox(height: 16),
+                _CustomerActions(
+                  archived: customer.isArchived,
+                  onEdit: onEdit,
+                  onArchive: onArchive,
+                  onRestore: onRestore,
+                ),
                 const SizedBox(height: 16),
                 ..._coordinateLines(context),
               ],
@@ -179,6 +195,48 @@ class ClientDetailPane extends ConsumerWidget {
           ),
         ),
     ];
+  }
+}
+
+class _CustomerActions extends StatelessWidget {
+  const _CustomerActions({
+    required this.archived,
+    required this.onEdit,
+    required this.onArchive,
+    required this.onRestore,
+  });
+
+  final bool archived;
+  final VoidCallback onEdit;
+  final VoidCallback onArchive;
+  final VoidCallback onRestore;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (!archived) ...[
+          OutlinedButton(
+            onPressed: onEdit,
+            child: const Text(clientsEditCustomer),
+          ),
+          OutlinedButton(
+            onPressed: onArchive,
+            child: const Text(clientsArchiveAction),
+          ),
+        ] else
+          FilledButton(
+            onPressed: onRestore,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.forest,
+              foregroundColor: AppColors.onForest,
+            ),
+            child: const Text(clientsRestoreAction),
+          ),
+      ],
+    );
   }
 }
 

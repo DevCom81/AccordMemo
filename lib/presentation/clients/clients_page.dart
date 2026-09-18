@@ -8,6 +8,8 @@ import '../theme/app_colors.dart';
 import 'client_detail_pane.dart';
 import 'clients_providers.dart';
 import 'clients_strings.dart';
+import 'customer_confirm_dialog.dart';
+import 'customer_form_dialog.dart';
 
 const clientsMasterDetailBreakpoint = 960.0;
 const _listPaneWidth = 340.0;
@@ -28,6 +30,61 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
     super.dispose();
   }
 
+  void _selectActiveCustomer(Customer customer) {
+    _searchController.clear();
+    ref.read(clientsQueryProvider.notifier).setImmediate('');
+    ref.read(clientsFilterProvider.notifier).setFilter(
+      CustomerStatusFilter.active,
+      clearSelection: false,
+    );
+    ref.read(selectedCustomerIdProvider.notifier).select(customer.id);
+    ref.invalidate(clientsSearchProvider);
+  }
+
+  Future<void> _createCustomer() async {
+    final created = await showCustomerFormDialog(context: context, ref: ref);
+    if (!mounted || created == null) {
+      return;
+    }
+    _selectActiveCustomer(created);
+  }
+
+  Future<void> _editCustomer(Customer customer) async {
+    final updated = await showCustomerFormDialog(
+      context: context,
+      ref: ref,
+      existing: customer,
+    );
+    if (!mounted || updated == null) {
+      return;
+    }
+    ref.invalidate(clientsSearchProvider);
+  }
+
+  Future<void> _archiveCustomer(Customer customer) async {
+    final archived = await showArchiveCustomerDialog(
+      context: context,
+      ref: ref,
+      customerId: customer.id,
+    );
+    if (!mounted || !archived) {
+      return;
+    }
+    ref.invalidate(clientsSearchProvider);
+  }
+
+  Future<void> _restoreCustomer(Customer customer) async {
+    final restored = await showRestoreCustomerDialog(
+      context: context,
+      ref: ref,
+      customerId: customer.id,
+    );
+    if (!mounted || restored == null) {
+      return;
+    }
+    _selectActiveCustomer(restored);
+  }
+
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(clientsFilterProvider);
@@ -35,16 +92,20 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
     final async = ref.watch(clientsSearchProvider);
 
     ref.listen(clientsSearchProvider, (previous, next) {
-      next.whenData((customers) {
-        final selected = ref.read(selectedCustomerIdProvider);
-        if (selected == null) {
-          return;
-        }
-        final stillThere = customers.any((customer) => customer.id == selected);
-        if (!stillThere) {
-          ref.read(selectedCustomerIdProvider.notifier).clear();
-        }
-      });
+      if (next.isLoading) {
+        return;
+      }
+      final customers = next.value;
+      if (customers == null) {
+        return;
+      }
+      final selected = ref.read(selectedCustomerIdProvider);
+      if (selected == null) {
+        return;
+      }
+      if (!customers.any((customer) => customer.id == selected)) {
+        ref.read(selectedCustomerIdProvider.notifier).clear();
+      }
     });
 
     return LayoutBuilder(
@@ -72,7 +133,12 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(32, 8, 32, 24),
-                  child: ClientDetailPane(customer: selectedCustomer),
+                  child: ClientDetailPane(
+                    customer: selectedCustomer,
+                    onEdit: () => _editCustomer(selectedCustomer),
+                    onArchive: () => _archiveCustomer(selectedCustomer),
+                    onRestore: () => _restoreCustomer(selectedCustomer),
+                  ),
                 ),
               ),
             ],
@@ -93,6 +159,7 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                 onFilterChanged: (value) {
                   ref.read(clientsFilterProvider.notifier).setFilter(value);
                 },
+                onCreate: _createCustomer,
               ),
             ),
             Expanded(
@@ -148,7 +215,14 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
                         Expanded(
                           child: selectedCustomer == null
                               ? const _SelectPrompt()
-                              : ClientDetailPane(customer: selectedCustomer),
+                              : ClientDetailPane(
+                                  customer: selectedCustomer,
+                                  onEdit: () => _editCustomer(selectedCustomer),
+                                  onArchive: () =>
+                                      _archiveCustomer(selectedCustomer),
+                                  onRestore: () =>
+                                      _restoreCustomer(selectedCustomer),
+                                ),
                         ),
                       ],
                     );
@@ -169,21 +243,39 @@ class _ClientsHeader extends StatelessWidget {
     required this.filter,
     required this.onQueryChanged,
     required this.onFilterChanged,
+    required this.onCreate,
   });
 
   final TextEditingController controller;
   final CustomerStatusFilter filter;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<CustomerStatusFilter> onFilterChanged;
+  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          clientsPageTitle,
-          style: Theme.of(context).textTheme.headlineLarge,
+        Wrap(
+          spacing: 16,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              clientsPageTitle,
+              style: Theme.of(context).textTheme.headlineLarge,
+            ),
+            FilledButton.icon(
+              onPressed: onCreate,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.forest,
+                foregroundColor: AppColors.onForest,
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text(clientsNewCustomer),
+            ),
+          ],
         ),
         const SizedBox(height: 24),
         Semantics(

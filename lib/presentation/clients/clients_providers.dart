@@ -52,12 +52,17 @@ final class ClientsFilter extends Notifier<CustomerStatusFilter> {
   @override
   CustomerStatusFilter build() => CustomerStatusFilter.active;
 
-  void setFilter(CustomerStatusFilter filter) {
+  void setFilter(
+    CustomerStatusFilter filter, {
+    bool clearSelection = true,
+  }) {
     if (state == filter) {
       return;
     }
     state = filter;
-    ref.read(selectedCustomerIdProvider.notifier).clear();
+    if (clearSelection) {
+      ref.read(selectedCustomerIdProvider.notifier).clear();
+    }
   }
 }
 
@@ -80,6 +85,14 @@ final class ClientsQuery extends Notifier<String> {
         state = next;
       }
     });
+  }
+
+  void setImmediate(String raw) {
+    _debounce?.cancel();
+    final next = raw.trim();
+    if (state != next) {
+      state = next;
+    }
   }
 }
 

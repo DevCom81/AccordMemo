@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:accord_memo/application/customer/customer_service.dart';
 import 'package:accord_memo/application/piano/piano_service.dart';
 import 'package:accord_memo/domain/customer/civility.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
+import 'package:accord_memo/domain/customer/customer_repository.dart';
 import 'package:accord_memo/domain/piano/piano.dart';
 import 'package:accord_memo/domain/piano/piano_repository.dart';
 import 'package:accord_memo/domain/piano/piano_type.dart';
@@ -85,7 +87,7 @@ Piano _piano({
 }
 
 CustomerService _customerService(
-  InMemoryCustomerRepository customers,
+  CustomerRepository customers,
   PianoRepository pianos,
 ) {
   return CustomerService(
@@ -100,7 +102,7 @@ CustomerService _customerService(
 }
 
 PianoService _pianoService(
-  InMemoryCustomerRepository customers,
+  CustomerRepository customers,
   PianoRepository pianos,
 ) {
   return PianoService(
@@ -115,7 +117,7 @@ PianoService _pianoService(
 }
 
 Widget _clientsApp({
-  required InMemoryCustomerRepository customers,
+  required CustomerRepository customers,
   PianoRepository? pianos,
 }) {
   final pianoRepo = pianos ?? InMemoryPianoRepository();
@@ -449,7 +451,7 @@ void main() {
     expect(find.text(clientsNoPianoBody), findsOneWidget);
   });
 
-  testWidgets('permet de consulter un client archivé sans action Restaurer', (
+  testWidgets('permet de consulter un client archivé sans action Modifier', (
     tester,
   ) async {
     await _prepareDesktop(tester);
@@ -473,7 +475,9 @@ void main() {
 
     expect(find.text(clientsArchivedBanner), findsOneWidget);
     expect(find.text('Albi'), findsWidgets);
-    expect(find.text('Restaurer'), findsNothing);
+    expect(find.text(clientsEditCustomer), findsNothing);
+    expect(find.text(clientsArchiveAction), findsNothing);
+    expect(find.text(clientsRestoreAction), findsOneWidget);
   });
 
   testWidgets('distingue un piano archivé sans bouton mort', (tester) async {
@@ -667,6 +671,386 @@ void main() {
     expect(find.textContaining('SQLite'), findsNothing);
     expect(find.text('Jean Dupont'), findsWidgets);
   });
+
+  testWidgets('ouvre le formulaire de création', (tester) async {
+    await _prepareDesktop(tester);
+    await tester.pumpWidget(_clientsApp(customers: InMemoryCustomerRepository()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, clientsNewCustomer));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(clientsCreateTitle),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.widgetWithText(TextFormField, clientsLastNameLabel),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('refuse la création sans nom', (tester) async {
+    await _prepareDesktop(tester);
+    await tester.pumpWidget(_clientsApp(customers: InMemoryCustomerRepository()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, clientsNewCustomer));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text(clientsLastNameRequired), findsOneWidget);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  testWidgets('crée un client via CustomerService puis affiche sa fiche', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, clientsNewCustomer));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsLastNameLabel),
+      'Bernard',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsCityLabel),
+      'Castres',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Bernard'), findsWidgets);
+    expect(find.text('Castres'), findsWidgets);
+
+    final created = await customers.findById(
+      CustomerId('00000000-0000-4000-8000-000000000001'),
+    );
+    expect(created, isNotNull);
+    expect(created!.lastName, 'Bernard');
+    expect(created.city, 'Castres');
+    expect(created.isArchived, isFalse);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    expect(container.read(selectedCustomerIdProvider), created.id);
+    expect(container.read(clientsFilterProvider), CustomerStatusFilter.active);
+    expect(find.text(clientsSelectPrompt), findsNothing);
+    expect(find.text(clientsEditCustomer), findsOneWidget);
+    expect(find.text(clientsNoPianoTitle), findsOneWidget);
+  });
+
+  testWidgets('préremplit la modification et affiche les nouvelles valeurs', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      civility: Civility.monsieur,
+      lastName: 'Dupont',
+      firstName: 'Jean',
+      city: 'Toulouse',
+      email: 'jean@example.com',
+    );
+    await customers.insert(dupont);
+
+    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(clientsEditCustomer));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text(clientsEditTitle),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, clientsLastNameLabel),
+          )
+          .controller
+          ?.text,
+      'Dupont',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, clientsFirstNameLabel),
+          )
+          .controller
+          ?.text,
+      'Jean',
+    );
+    expect(
+      tester
+          .widget<TextFormField>(
+            find.widgetWithText(TextFormField, clientsCityLabel),
+          )
+          .controller
+          ?.text,
+      'Toulouse',
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsCityLabel),
+      'Albi',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Jean Dupont'), findsWidgets);
+    expect(find.text('Albi'), findsWidgets);
+    expect(find.text('Toulouse'), findsNothing);
+
+    final updated = await customers.findById(dupont.id);
+    expect(updated!.city, 'Albi');
+    expect(updated.isArchived, isFalse);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    expect(container.read(selectedCustomerIdProvider), dupont.id);
+  });
+
+  testWidgets('demande confirmation puis archive via CustomerService', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    await customers.insert(dupont);
+
+    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(clientsArchiveAction));
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsArchiveTitle), findsOneWidget);
+    expect(find.text(clientsArchiveBody), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(TextButton, clientsCancel),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Jean Dupont'), findsWidgets);
+    expect((await customers.findById(dupont.id))!.isArchived, isFalse);
+
+    await tester.tap(find.text(clientsArchiveAction));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsArchiveConfirm),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Jean Dupont'), findsNothing);
+    expect((await customers.findById(dupont.id))!.isArchived, isTrue);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    expect(container.read(selectedCustomerIdProvider), isNull);
+
+    await tester.tap(find.text(clientsFilterArchived));
+    await tester.pumpAndSettle();
+    expect(find.text('Jean Dupont'), findsOneWidget);
+  });
+
+  testWidgets('restaure un client via CustomerService sans Modifier', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final martin = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Martin',
+      firstName: 'Marie',
+      archived: true,
+    );
+    await customers.insert(martin);
+
+    await tester.pumpWidget(_clientsApp(customers: customers));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(clientsFilterArchived));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Marie Martin'));
+    await tester.pumpAndSettle();
+    expect(find.text(clientsEditCustomer), findsNothing);
+
+    await tester.tap(find.text(clientsRestoreAction));
+    await tester.pumpAndSettle();
+    expect(find.text(clientsRestoreTitle), findsOneWidget);
+    expect(find.text(clientsRestoreBody), findsOneWidget);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsRestoreConfirm),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Marie Martin'), findsWidgets);
+    expect(find.text(clientsEditCustomer), findsOneWidget);
+    expect(find.text(clientsArchivedBanner), findsNothing);
+    expect((await customers.findById(martin.id))!.isArchived, isFalse);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    expect(container.read(selectedCustomerIdProvider), martin.id);
+    expect(container.read(clientsFilterProvider), CustomerStatusFilter.active);
+  });
+
+  testWidgets('désactive les actions pendant une mutation', (tester) async {
+    await _prepareDesktop(tester);
+    final inner = InMemoryCustomerRepository();
+    final gate = Completer<void>();
+    await tester.pumpWidget(
+      _clientsApp(customers: _DelayedInsertCustomerRepository(inner, gate)),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, clientsNewCustomer));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsLastNameLabel),
+      'Bernard',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<TextButton>(
+            find.descendant(
+              of: find.byType(AlertDialog),
+              matching: find.widgetWithText(TextButton, clientsCancel),
+            ),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('Bernard'), findsWidgets);
+  });
+
+  testWidgets('présente une erreur de mutation sans détail technique', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    await tester.pumpWidget(
+      _clientsApp(customers: _FailingInsertCustomerRepository()),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, clientsNewCustomer));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, clientsLastNameLabel),
+      'Bernard',
+    );
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.widgetWithText(FilledButton, clientsSaveCustomer),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(clientsMutationGenericError), findsOneWidget);
+    expect(find.textContaining('SQLite'), findsNothing);
+    expect(find.textContaining('Exception'), findsNothing);
+    expect(find.byType(AlertDialog), findsOneWidget);
+  });
+
+  test('les dialogs clients passent par CustomerService', () {
+    const files = [
+      'lib/presentation/clients/customer_form_dialog.dart',
+      'lib/presentation/clients/customer_confirm_dialog.dart',
+      'lib/presentation/clients/clients_page.dart',
+      'lib/presentation/clients/client_detail_pane.dart',
+    ];
+    for (final path in files) {
+      final source = File(path).readAsStringSync();
+      expect(source.contains('customerRepositoryProvider'), isFalse, reason: path);
+      expect(source.contains('app_database'), isFalse, reason: path);
+      expect(source.contains('DriftCustomerRepository'), isFalse, reason: path);
+    }
+    final form = File(
+      'lib/presentation/clients/customer_form_dialog.dart',
+    ).readAsStringSync();
+    final confirm = File(
+      'lib/presentation/clients/customer_confirm_dialog.dart',
+    ).readAsStringSync();
+    expect(form.contains('customerServiceProvider'), isTrue);
+    expect(confirm.contains('customerServiceProvider'), isTrue);
+  });
 }
 
 final class _CountingPianoRepository implements PianoRepository {
@@ -691,5 +1075,53 @@ final class _CountingPianoRepository implements PianoRepository {
   }) {
     findByCustomerCalls += 1;
     return _inner.findByCustomerId(customerId: customerId, filter: filter);
+  }
+}
+
+final class _DelayedInsertCustomerRepository implements CustomerRepository {
+  _DelayedInsertCustomerRepository(this._inner, this._insertGate);
+
+  final InMemoryCustomerRepository _inner;
+  final Completer<void> _insertGate;
+
+  @override
+  Future<Customer?> findById(CustomerId id) => _inner.findById(id);
+
+  @override
+  Future<void> insert(Customer customer) async {
+    await _insertGate.future;
+    await _inner.insert(customer);
+  }
+
+  @override
+  Future<void> update(Customer customer) => _inner.update(customer);
+
+  @override
+  Future<List<Customer>> search({
+    required CustomerStatusFilter filter,
+    String query = '',
+  }) {
+    return _inner.search(filter: filter, query: query);
+  }
+}
+
+final class _FailingInsertCustomerRepository implements CustomerRepository {
+  @override
+  Future<Customer?> findById(CustomerId id) async => null;
+
+  @override
+  Future<void> insert(Customer customer) async {
+    throw Exception('SQLite constraint failed');
+  }
+
+  @override
+  Future<void> update(Customer customer) async {}
+
+  @override
+  Future<List<Customer>> search({
+    required CustomerStatusFilter filter,
+    String query = '',
+  }) async {
+    return const [];
   }
 }
