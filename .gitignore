@@ -51,3 +51,6 @@ app.*.map.json
 .env
 .env.*
 !.env.example
+
+# Windows installer output (the .iss stays versioned)
+/dist/
