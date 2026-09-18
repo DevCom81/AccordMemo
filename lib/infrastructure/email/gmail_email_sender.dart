@@ -34,6 +34,7 @@ final class GmailEmailSender implements EmailSender {
           to: email.to,
           subject: email.subject,
           body: email.body,
+          htmlBody: email.htmlBody,
         )),
         'me',
       );
@@ -54,21 +55,40 @@ final class GmailEmailSender implements EmailSender {
   }
 }
 
+const gmailAlternativeBoundary = 'accord_memo_alt';
+
 String encodeGmailRawMessage({
   required String from,
   required String to,
   required String subject,
   required String body,
+  String? htmlBody,
 }) {
   final encodedSubject =
       '=?utf-8?B?${base64.encode(utf8.encode(subject))}?=';
-  final rfc2822 = 'From: $from\r\n'
+  final headers = 'From: $from\r\n'
       'To: $to\r\n'
       'Subject: $encodedSubject\r\n'
-      'MIME-Version: 1.0\r\n'
-      'Content-Type: text/plain; charset=utf-8\r\n'
-      'Content-Transfer-Encoding: base64\r\n'
-      '\r\n'
-      '${base64.encode(utf8.encode(body))}';
+      'MIME-Version: 1.0\r\n';
+  final rfc2822 = htmlBody == null
+      ? '$headers'
+          'Content-Type: text/plain; charset=utf-8\r\n'
+          'Content-Transfer-Encoding: base64\r\n'
+          '\r\n'
+          '${base64.encode(utf8.encode(body))}'
+      : '$headers'
+          'Content-Type: multipart/alternative; boundary="$gmailAlternativeBoundary"\r\n'
+          '\r\n'
+          '--$gmailAlternativeBoundary\r\n'
+          'Content-Type: text/plain; charset=utf-8\r\n'
+          'Content-Transfer-Encoding: base64\r\n'
+          '\r\n'
+          '${base64.encode(utf8.encode(body))}\r\n'
+          '--$gmailAlternativeBoundary\r\n'
+          'Content-Type: text/html; charset=utf-8\r\n'
+          'Content-Transfer-Encoding: base64\r\n'
+          '\r\n'
+          '${base64.encode(utf8.encode(htmlBody))}\r\n'
+          '--$gmailAlternativeBoundary--';
   return base64Url.encode(utf8.encode(rfc2822)).replaceAll('=', '');
 }

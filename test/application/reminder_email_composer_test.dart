@@ -20,4 +20,26 @@ void main() {
     expect(email.body, contains('Éléonore'));
     expect(email.body, contains('Pianos d’Occitanie'));
   });
+
+  test('ajoute le CTA et l’URL fixe dans le texte et le HTML', () {
+    const composer = ReminderEmailComposer();
+    final email = composer.compose(
+      to: 'jean@example.com',
+      dueDate: CalendarDate(2026, 9, 17),
+    );
+
+    expect(email.body, contains(reminderCallbackLabel));
+    expect(email.body, contains(reminderCallbackUrl));
+    expect(reminderCallbackUrl.contains('?'), isFalse);
+    expect(Uri.parse(reminderCallbackUrl).hasQuery, isFalse);
+    expect(email.body, isNot(contains('$reminderCallbackUrl?')));
+
+    final html = email.htmlBody!;
+    expect(html, contains(reminderCallbackLabel));
+    expect(html, contains('href="$reminderCallbackUrl"'));
+    expect(html, isNot(contains('$reminderCallbackUrl?')));
+    expect(html.contains('<script'), isFalse);
+    expect(html.contains('src='), isFalse);
+    expect(html.contains('javascript:'), isFalse);
+  });
 }

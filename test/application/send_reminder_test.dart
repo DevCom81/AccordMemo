@@ -2,6 +2,7 @@ import 'package:accord_memo/application/ports/email_sender.dart';
 import 'package:accord_memo/application/ports/google_auth_session.dart';
 import 'package:accord_memo/application/reminder/send_reminder.dart';
 import 'package:accord_memo/application/reminder/send_reminder_exceptions.dart';
+import 'package:accord_memo/application/reminder/reminder_email_composer.dart';
 import 'package:accord_memo/application/reminder/reminder_service.dart';
 import 'package:accord_memo/domain/activity/activity_type.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
@@ -133,6 +134,14 @@ void main() {
 
     expect(emailSender.sent, hasLength(1));
     expect(emailSender.sent.single.to, 'jean@example.com');
+    expect(emailSender.sent.single.body, contains(reminderCallbackLabel));
+    expect(emailSender.sent.single.body, contains(reminderCallbackUrl));
+    expect(emailSender.sent.single.htmlBody, contains(reminderCallbackLabel));
+    expect(
+      emailSender.sent.single.htmlBody,
+      contains('href="$reminderCallbackUrl"'),
+    );
+    expect(reminderCallbackUrl.contains('?'), isFalse);
     expect(sent.status, ReminderStatus.sent);
     final journal = await activities.findRecent(limit: 10);
     expect(journal, hasLength(1));

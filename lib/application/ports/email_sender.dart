@@ -3,11 +3,13 @@ final class OutgoingEmail {
     required this.to,
     required this.subject,
     required this.body,
+    this.htmlBody,
   });
 
   final String to;
   final String subject;
   final String body;
+  final String? htmlBody;
 }
 
 final class SentEmailReceipt {
