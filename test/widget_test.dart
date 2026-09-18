@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/fake_app_data_locator.dart';
+import 'support/fake_mail_overrides.dart';
 
 void main() {
   testWidgets('démarre AccordMémo sur le tableau de bord', (tester) async {
@@ -38,6 +39,7 @@ void main() {
           appDataLocatorProvider.overrideWith(
             (ref) => FakeAppDataLocator.displayOnly(),
           ),
+          ...fakeMailOverrides(),
         ],
         child: const AccordMemoApp(),
       ),

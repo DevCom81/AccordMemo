@@ -15,6 +15,7 @@ class PianoSummaryCard extends StatelessWidget {
     this.muted = false,
     this.lastTuningDate,
     this.onRecordTuning,
+    this.onCorrectTuning,
     this.onEdit,
     this.onArchive,
     this.onRestore,
@@ -24,6 +25,7 @@ class PianoSummaryCard extends StatelessWidget {
   final bool muted;
   final CalendarDate? lastTuningDate;
   final VoidCallback? onRecordTuning;
+  final VoidCallback? onCorrectTuning;
   final VoidCallback? onEdit;
   final VoidCallback? onArchive;
   final VoidCallback? onRestore;
@@ -49,6 +51,7 @@ class PianoSummaryCard extends StatelessWidget {
         : '$clientsLastTuningPrefix${formatFrenchNumericDate(lastTuningDate!)}';
     final canAct =
         onRecordTuning != null ||
+        onCorrectTuning != null ||
         onEdit != null ||
         onArchive != null ||
         onRestore != null;
@@ -103,6 +106,11 @@ class PianoSummaryCard extends StatelessWidget {
                           foregroundColor: AppColors.onForest,
                         ),
                         child: const Text(clientsRecordTuning),
+                      ),
+                    if (onCorrectTuning != null)
+                      OutlinedButton(
+                        onPressed: onCorrectTuning,
+                        child: const Text(clientsCorrectTuning),
                       ),
                     if (onEdit != null)
                       OutlinedButton(

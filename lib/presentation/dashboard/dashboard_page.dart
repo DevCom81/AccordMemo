@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/dashboard/dashboard_display_names.dart';
 import '../../application/dashboard/dashboard_reminder.dart';
 import '../../application/dashboard/dashboard_snapshot.dart';
+import '../../application/ports/google_auth_session.dart';
+import '../../application/reminder/recipient_email.dart';
 import '../../domain/shared/calendar_date.dart';
 import '../app_providers.dart';
 import '../formatters/french_date_label.dart';
@@ -12,6 +14,7 @@ import '../theme/app_colors.dart';
 import 'dashboard_reminder_card.dart';
 import 'dashboard_strings.dart';
 import 'reschedule_dialog.dart';
+import 'send_reminder_dialog.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key, required this.onSeeAllClients});
@@ -45,22 +48,37 @@ class DashboardPage extends ConsumerWidget {
           ],
         ),
       ),
-      data: (snapshot) => _DashboardBody(
-        snapshot: snapshot,
-        onSeeAllClients: onSeeAllClients,
-        onReschedule: (reminder) async {
-          final saved = await showRescheduleDialog(
-            context: context,
-            ref: ref,
-            reminder: reminder,
-            today: snapshot.today,
-          );
-          if (saved) {
-            ref.invalidate(dashboardSnapshotProvider);
-            ref.invalidate(historySnapshotProvider);
-          }
-        },
-      ),
+      data: (snapshot) {
+        final google = ref.watch(googleAuthStateProvider);
+        return _DashboardBody(
+          snapshot: snapshot,
+          googleAuth: google.asData?.value ?? const GoogleAuthState.disconnected(),
+          onSeeAllClients: onSeeAllClients,
+          onReschedule: (reminder) async {
+            final saved = await showRescheduleDialog(
+              context: context,
+              ref: ref,
+              reminder: reminder,
+              today: snapshot.today,
+            );
+            if (saved) {
+              ref.invalidate(dashboardSnapshotProvider);
+              ref.invalidate(historySnapshotProvider);
+            }
+          },
+          onSendReminder: (reminder) async {
+            final sent = await showSendReminderDialog(
+              context: context,
+              ref: ref,
+              reminder: reminder,
+            );
+            if (sent) {
+              ref.invalidate(dashboardSnapshotProvider);
+              ref.invalidate(historySnapshotProvider);
+            }
+          },
+        );
+      },
     );
   }
 }
@@ -68,13 +86,17 @@ class DashboardPage extends ConsumerWidget {
 class _DashboardBody extends StatelessWidget {
   const _DashboardBody({
     required this.snapshot,
+    required this.googleAuth,
     required this.onSeeAllClients,
     required this.onReschedule,
+    required this.onSendReminder,
   });
 
   final DashboardSnapshot snapshot;
+  final GoogleAuthState googleAuth;
   final VoidCallback onSeeAllClients;
   final Future<void> Function(DashboardReminder reminder) onReschedule;
+  final Future<void> Function(DashboardReminder reminder) onSendReminder;
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +193,9 @@ class _DashboardBody extends StatelessWidget {
             items: snapshot.overdue,
             today: snapshot.today,
             bucket: DashboardReminderBucket.overdue,
+            googleAuth: googleAuth,
             onReschedule: onReschedule,
+            onSendReminder: onSendReminder,
           ),
           ..._section(
             context: context,
@@ -179,7 +203,9 @@ class _DashboardBody extends StatelessWidget {
             items: snapshot.dueSoon,
             today: snapshot.today,
             bucket: DashboardReminderBucket.dueSoon,
+            googleAuth: googleAuth,
             onReschedule: onReschedule,
+            onSendReminder: onSendReminder,
           ),
           ..._section(
             context: context,
@@ -187,7 +213,9 @@ class _DashboardBody extends StatelessWidget {
             items: snapshot.upcoming,
             today: snapshot.today,
             bucket: DashboardReminderBucket.upcoming,
+            googleAuth: googleAuth,
             onReschedule: onReschedule,
+            onSendReminder: onSendReminder,
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
@@ -201,7 +229,9 @@ class _DashboardBody extends StatelessWidget {
     required List<DashboardReminder> items,
     required CalendarDate today,
     required DashboardReminderBucket bucket,
+    required GoogleAuthState googleAuth,
     required Future<void> Function(DashboardReminder reminder) onReschedule,
+    required Future<void> Function(DashboardReminder reminder) onSendReminder,
   }) {
     if (items.isEmpty) {
       return const [];
@@ -225,6 +255,10 @@ class _DashboardBody extends StatelessWidget {
               today: today,
               bucket: bucket,
               onReschedule: () => onReschedule(reminder),
+              onSendReminder: _canSend(reminder, googleAuth)
+                  ? () => onSendReminder(reminder)
+                  : null,
+              sendDisabledReason: _sendDisabledReason(reminder, googleAuth),
             );
           },
         ),
@@ -431,4 +465,25 @@ class _KpiCard extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _canSend(DashboardReminder reminder, GoogleAuthState googleAuth) {
+  return googleAuth.isConnected &&
+      RecipientEmail.tryParse(reminder.email) != null;
+}
+
+String _sendDisabledReason(
+  DashboardReminder reminder,
+  GoogleAuthState googleAuth,
+) {
+  if (RecipientEmail.isBlank(reminder.email)) {
+    return dashboardSendReminderMissingEmail;
+  }
+  if (RecipientEmail.tryParse(reminder.email) == null) {
+    return dashboardSendReminderInvalidEmail;
+  }
+  if (!googleAuth.isConnected) {
+    return dashboardSendReminderGoogleDisconnected;
+  }
+  return dashboardSendReminderTitle;
 }

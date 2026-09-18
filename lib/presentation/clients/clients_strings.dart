@@ -203,6 +203,18 @@ const clientsTuningDateInFuture =
 
 const clientsRecordTuningGenericError = 'Impossible d’enregistrer l’accord.';
 
+const clientsCorrectTuning = 'Corriger un accord';
+
+const clientsPianoTuningsTitle = 'Accords enregistrés';
+
+const clientsCorrectTuningTitle = 'Corriger un accord';
+
+const clientsCorrectTuningSave = 'Enregistrer';
+
+const clientsCorrectTuningGenericError = 'Impossible de corriger l’accord.';
+
+const clientsTuningNotFound = 'Cet accord est introuvable.';
+
 String clientsReminderEveryMonths(int months) {
   return 'Rappel tous les $months mois';
 }

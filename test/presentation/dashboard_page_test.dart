@@ -4,12 +4,16 @@ import 'package:accord_memo/application/dashboard/dashboard_reminder.dart';
 import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
 import 'package:accord_memo/application/history/history_entry.dart';
 import 'package:accord_memo/application/reminder/reminder_service.dart';
+import 'package:accord_memo/application/reminder/send_reminder.dart';
+import 'package:accord_memo/domain/activity/activity_type.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/piano/piano.dart';
 import 'package:accord_memo/domain/reminder/reminder.dart';
 import 'package:accord_memo/domain/reminder/reminder_status.dart';
 import 'package:accord_memo/domain/shared/calendar_date.dart';
 import 'package:accord_memo/domain/tuning/tuning.dart';
+import 'package:accord_memo/infrastructure/email/fake_email_sender.dart';
+import 'package:accord_memo/infrastructure/google/fake_google_auth_session.dart';
 import 'package:accord_memo/presentation/app_providers.dart';
 import 'package:accord_memo/presentation/dashboard/dashboard_page.dart';
 import 'package:accord_memo/presentation/dashboard/dashboard_reminder_card.dart';
@@ -21,9 +25,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_id_generator.dart';
+import '../support/fake_mail_overrides.dart';
 import '../support/fixed_clock.dart';
 import '../support/immediate_transaction_runner.dart';
 import '../support/in_memory_activity_repository.dart';
+import '../support/in_memory_customer_repository.dart';
 import '../support/in_memory_piano_repository.dart';
 import '../support/in_memory_reminder_repository.dart';
 
@@ -71,7 +77,10 @@ Widget _dashboardApp({
   required Future<DashboardSnapshot> Function() loadSnapshot,
   Future<List<HistoryEntry>> Function()? loadHistory,
   ReminderService? reminderService,
+  SendReminder? sendReminder,
   VoidCallback? onSeeAllClients,
+  FakeGoogleAuthSession? google,
+  FakeEmailSender? emailSender,
 }) {
   return ProviderScope(
     overrides: [
@@ -81,6 +90,9 @@ Widget _dashboardApp({
       }),
       if (reminderService != null)
         reminderServiceProvider.overrideWith((ref) => reminderService),
+      if (sendReminder != null)
+        sendReminderProvider.overrideWith((ref) => sendReminder),
+      ...fakeMailOverrides(google: google, emailSender: emailSender),
     ],
     child: MaterialApp(
       theme: buildAppTheme(),
@@ -546,4 +558,252 @@ void main() {
     );
     expect(send.onPressed, isNull);
   });
+
+  testWidgets('active Envoyer le rappel si email valide et Gmail connecté', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        google: FakeGoogleAuthSession.connected(
+          accountEmail: 'eleonore@example.com',
+        ),
+        loadSnapshot: () async {
+          return _snapshot(
+            dueSoon: [
+              _reminder(
+                dueDate: today.addDays(2),
+                email: 'jean@example.com',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final send = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Envoyer le rappel'),
+    );
+    expect(send.onPressed, isNotNull);
+  });
+
+  testWidgets('email invalide laisse Envoyer disabled malgré Gmail connecté', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    await tester.pumpWidget(
+      _dashboardApp(
+        google: FakeGoogleAuthSession.connected(
+          accountEmail: 'eleonore@example.com',
+        ),
+        loadSnapshot: () async {
+          return _snapshot(
+            dueSoon: [
+              _reminder(
+                dueDate: today.addDays(2),
+                email: 'pas une adresse',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final send = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Envoyer le rappel'),
+    );
+    expect(send.onPressed, isNull);
+  });
+
+  testWidgets('annuler l’aperçu n’envoie pas', (tester) async {
+    await prepareDesktopSurface(tester);
+    final world = await _sendWorld();
+    var dashboardLoads = 0;
+    var historyLoads = 0;
+
+    await tester.pumpWidget(
+      _dashboardApp(
+        google: world.google,
+        emailSender: world.emailSender,
+        reminderService: world.reminderService,
+        sendReminder: world.sendReminder,
+        loadSnapshot: () async {
+          dashboardLoads += 1;
+          return _snapshot(
+            dueSoon: [
+              _reminder(dueDate: today.addDays(2), email: 'jean@example.com'),
+            ],
+          );
+        },
+        loadHistory: () async {
+          historyLoads += 1;
+          return const <HistoryEntry>[];
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Envoyer le rappel'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text(dashboardSendReminderRecipientLabel), findsOneWidget);
+    expect(find.text('jean@example.com'), findsWidgets);
+    await tester.tap(find.text(dashboardSendReminderCancel));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(world.emailSender.sent, isEmpty);
+    expect(
+      (await world.reminders.findById(ReminderId('reminder-1')))!.status,
+      ReminderStatus.scheduled,
+    );
+    expect(dashboardLoads, 1);
+    expect(historyLoads, 0);
+  });
+
+  testWidgets('envoie une fois, marque sent et rafraîchit dashboard/history', (
+    tester,
+  ) async {
+    await prepareDesktopSurface(tester);
+    final world = await _sendWorld();
+    var dashboardLoads = 0;
+    var historyLoads = 0;
+
+    await tester.pumpWidget(
+      _dashboardApp(
+        google: world.google,
+        emailSender: world.emailSender,
+        reminderService: world.reminderService,
+        sendReminder: world.sendReminder,
+        loadSnapshot: () async {
+          dashboardLoads += 1;
+          return _snapshot(
+            dueSoon: [
+              _reminder(dueDate: today.addDays(2), email: 'jean@example.com'),
+            ],
+          );
+        },
+        loadHistory: () async {
+          historyLoads += 1;
+          return const <HistoryEntry>[];
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DashboardPage)),
+    );
+    container.listen(
+      historySnapshotProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    await tester.pumpAndSettle();
+    expect(historyLoads, 1);
+    expect(dashboardLoads, 1);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Envoyer le rappel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text(dashboardSendReminderRecipientLabel), findsOneWidget);
+    expect(world.emailSender.sent, isEmpty);
+
+    await tester.tap(find.widgetWithText(FilledButton, dashboardSendReminderConfirm));
+    await tester.pumpAndSettle();
+
+    expect(world.emailSender.sent, hasLength(1));
+    expect(
+      (await world.reminders.findById(ReminderId('reminder-1')))!.status,
+      ReminderStatus.sent,
+    );
+    expect(
+      (await world.activities.findRecent(limit: 10)).single.type,
+      ActivityType.reminderSent,
+    );
+    expect(dashboardLoads, 2);
+    expect(historyLoads, 2);
+  });
+}
+
+final class _SendWorld {
+  _SendWorld({
+    required this.google,
+    required this.emailSender,
+    required this.reminders,
+    required this.activities,
+    required this.reminderService,
+    required this.sendReminder,
+  });
+
+  final FakeGoogleAuthSession google;
+  final FakeEmailSender emailSender;
+  final InMemoryReminderRepository reminders;
+  final InMemoryActivityRepository activities;
+  final ReminderService reminderService;
+  final SendReminder sendReminder;
+}
+
+Future<_SendWorld> _sendWorld() async {
+  final now = DateTime.utc(2026, 9, 17, 10);
+  final customers = InMemoryCustomerRepository();
+  final pianos = InMemoryPianoRepository();
+  final reminders = InMemoryReminderRepository();
+  final activities = InMemoryActivityRepository(pianos);
+  final google = FakeGoogleAuthSession.connected(
+    accountEmail: 'eleonore@example.com',
+  );
+  final emailSender = FakeEmailSender();
+  await customers.insert(
+    Customer.create(
+      id: CustomerId('customer-1'),
+      lastName: 'Dupont',
+      firstName: 'Jean',
+      email: 'jean@example.com',
+      now: now,
+    ),
+  );
+  await pianos.insert(
+    Piano.create(
+      id: PianoId('piano-1'),
+      customerId: CustomerId('customer-1'),
+      brand: 'Yamaha',
+      now: now,
+    ),
+  );
+  await reminders.insert(
+    Reminder.schedule(
+      id: ReminderId('reminder-1'),
+      pianoId: PianoId('piano-1'),
+      originTuningId: TuningId('tuning-1'),
+      dueDate: CalendarDate(2026, 10, 1),
+      now: now,
+    ),
+  );
+  final reminderService = ReminderService(
+    clock: FixedClock(now),
+    idGenerator: FakeIdGenerator(spareIds()),
+    transactions: const ImmediateTransactionRunner(),
+    reminders: reminders,
+    activities: activities,
+  );
+  return _SendWorld(
+    google: google,
+    emailSender: emailSender,
+    reminders: reminders,
+    activities: activities,
+    reminderService: reminderService,
+    sendReminder: SendReminder(
+      reminders: reminderService,
+      pianos: pianos,
+      customers: customers,
+      googleAuth: google,
+      emailSender: emailSender,
+    ),
+  );
 }

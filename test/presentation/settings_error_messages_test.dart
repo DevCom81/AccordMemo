@@ -1,4 +1,5 @@
 import 'package:accord_memo/application/backup/backup_exceptions.dart';
+import 'package:accord_memo/application/ports/google_auth_session.dart';
 import 'package:accord_memo/infrastructure/persistence/sqlite_database_path.dart';
 import 'package:accord_memo/presentation/settings/settings_error_messages.dart';
 import 'package:accord_memo/presentation/settings/settings_strings.dart';
@@ -36,6 +37,21 @@ void main() {
     expect(
       settingsRestoreMessage(Exception('WAL')),
       settingsRestoreError,
+    );
+  });
+
+  test('mappe les erreurs Gmail Settings sans secret', () {
+    expect(
+      settingsMailMessage(const GoogleOAuthClientNotConfigured()),
+      settingsMailNotConfigured,
+    );
+    expect(
+      settingsMailMessage(const GoogleAuthorizationCancelled()),
+      settingsMailConnectCancelled,
+    );
+    expect(
+      settingsMailMessage(Exception('token ya29.secret')),
+      settingsMailGenericError,
     );
   });
 }

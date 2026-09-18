@@ -14,6 +14,7 @@ import 'clients_strings.dart';
 import 'piano_confirm_dialog.dart';
 import 'piano_form_dialog.dart';
 import 'piano_summary_card.dart';
+import 'piano_tunings_dialog.dart';
 import 'record_tuning_dialog.dart';
 
 class ClientDetailPane extends ConsumerWidget {
@@ -245,6 +246,21 @@ class ClientDetailPane extends ConsumerWidget {
     ref.invalidate(historySnapshotProvider);
   }
 
+  Future<void> _correctTuning(
+    BuildContext context,
+    WidgetRef ref,
+    Piano piano,
+  ) async {
+    if (customer.isArchived || piano.isArchived) {
+      return;
+    }
+    await showPianoTuningsDialog(
+      context: context,
+      ref: ref,
+      pianoId: piano.id,
+    );
+  }
+
   List<Widget> _pianoSlivers(
     BuildContext context,
     WidgetRef ref,
@@ -306,6 +322,9 @@ class ClientDetailPane extends ConsumerWidget {
                 onRecordTuning: customer.isArchived
                     ? null
                     : () => _recordTuning(context, ref, piano),
+                onCorrectTuning: customer.isArchived || latestDates[piano.id] == null
+                    ? null
+                    : () => _correctTuning(context, ref, piano),
                 onEdit: customer.isArchived
                     ? null
                     : () => _editPiano(context, ref, piano),

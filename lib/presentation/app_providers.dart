@@ -7,9 +7,13 @@ import '../application/dashboard/dashboard_service.dart';
 import '../application/dashboard/dashboard_snapshot.dart';
 import '../application/history/history_query.dart';
 import '../application/piano/piano_service.dart';
+import '../application/ports/email_sender.dart';
+import '../application/ports/google_auth_session.dart';
 import '../application/ports/id_generator.dart';
+import '../application/ports/secret_store.dart';
 import '../application/ports/transaction_runner.dart';
 import '../application/reminder/reminder_service.dart';
+import '../application/reminder/send_reminder.dart';
 import '../application/tuning/correct_tuning.dart';
 import '../application/tuning/latest_piano_tuning_query.dart';
 import '../application/tuning/record_tuning.dart';
@@ -20,6 +24,11 @@ import '../domain/customer/customer_repository.dart';
 import '../domain/piano/piano_repository.dart';
 import '../domain/reminder/reminder_repository.dart';
 import '../domain/tuning/tuning_repository.dart';
+import '../infrastructure/email/fake_email_sender.dart';
+import '../infrastructure/email/gmail_email_sender.dart';
+import '../infrastructure/google/fake_google_auth_session.dart';
+import '../infrastructure/google/google_apis_auth_session.dart';
+import '../infrastructure/google/google_oauth_desktop_client.dart';
 import '../infrastructure/ids/uuid_id_generator.dart';
 import '../infrastructure/persistence/app_database.dart';
 import '../infrastructure/persistence/drift_activity_repository.dart';
@@ -31,8 +40,10 @@ import '../infrastructure/persistence/drift_piano_repository.dart';
 import '../infrastructure/persistence/drift_reminder_repository.dart';
 import '../infrastructure/persistence/drift_transaction_runner.dart';
 import '../infrastructure/persistence/drift_tuning_repository.dart';
+import '../infrastructure/security/flutter_secure_secret_store.dart';
 import '../infrastructure/time/system_clock.dart';
 import 'app_database_holder.dart';
+import 'dev/demo_mode.dart';
 
 final appDatabaseProvider =
     NotifierProvider<AppDatabaseHolder, AppDatabase>(AppDatabaseHolder.new);
@@ -156,4 +167,51 @@ final dashboardSnapshotProvider = FutureProvider<DashboardSnapshot>((ref) {
 
 final historyQueryProvider = Provider<HistoryQuery>((ref) {
   return DriftHistoryQuery(ref.watch(appDatabaseProvider));
+});
+
+final googleOAuthDesktopClientProvider = Provider<GoogleOAuthDesktopClient>((
+  ref,
+) {
+  return GoogleOAuthDesktopClient.fromEnvironment();
+});
+
+final secretStoreProvider = Provider<SecretStore>((ref) {
+  return FlutterSecureSecretStore();
+});
+
+final googleApisAuthSessionProvider = Provider<GoogleApisAuthSession>((ref) {
+  return GoogleApisAuthSession(
+    desktopClient: ref.watch(googleOAuthDesktopClientProvider),
+    store: ref.watch(secretStoreProvider),
+  );
+});
+
+final googleAuthSessionProvider = Provider<GoogleAuthSession>((ref) {
+  if (ref.watch(demoModeProvider)) {
+    return FakeGoogleAuthSession.connected(
+      accountEmail: 'demo@pianosoccitanie.fr',
+    );
+  }
+  return ref.watch(googleApisAuthSessionProvider);
+});
+
+final googleAuthStateProvider = FutureProvider<GoogleAuthState>((ref) {
+  return ref.watch(googleAuthSessionProvider).currentState();
+});
+
+final emailSenderProvider = Provider<EmailSender>((ref) {
+  if (ref.watch(demoModeProvider)) {
+    return FakeEmailSender();
+  }
+  return GmailEmailSender(ref.watch(googleApisAuthSessionProvider));
+});
+
+final sendReminderProvider = Provider<SendReminder>((ref) {
+  return SendReminder(
+    reminders: ref.watch(reminderServiceProvider),
+    pianos: ref.watch(pianoRepositoryProvider),
+    customers: ref.watch(customerRepositoryProvider),
+    googleAuth: ref.watch(googleAuthSessionProvider),
+    emailSender: ref.watch(emailSenderProvider),
+  );
 });

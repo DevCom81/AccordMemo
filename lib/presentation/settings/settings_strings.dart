@@ -32,6 +32,29 @@ const settingsCancel = 'Annuler';
 
 const settingsWorking = 'Opération en cours…';
 
+const settingsMailSectionTitle = 'Envoi des rappels';
+
+const settingsMailAccountLabel = 'Compte Gmail';
+
+const settingsMailConnect = 'Connecter un compte Google';
+
+const settingsMailConnectedPrefix = 'Compte connecté : ';
+
+const settingsMailReconnect = 'Reconnecter';
+
+const settingsMailDisconnect = 'Déconnecter';
+
+const settingsMailConnecting = 'Connexion Google…';
+
+const settingsMailConnectCancelled = 'La connexion Google a été annulée.';
+
+const settingsMailConnectFailed = 'Impossible de connecter le compte Google.';
+
+const settingsMailNotConfigured =
+    'L’envoi d’e-mail n’est pas encore configuré sur cet ordinateur.';
+
+const settingsMailGenericError = 'Impossible de mettre à jour le compte Gmail.';
+
 const settingsBackupError = 'Impossible d’enregistrer la copie.';
 
 const settingsRestoreError =

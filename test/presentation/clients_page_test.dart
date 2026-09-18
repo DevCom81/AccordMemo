@@ -5,7 +5,9 @@ import 'package:accord_memo/application/customer/customer_service.dart';
 import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
 import 'package:accord_memo/application/history/history_entry.dart';
 import 'package:accord_memo/application/piano/piano_service.dart';
+import 'package:accord_memo/application/tuning/correct_tuning.dart';
 import 'package:accord_memo/application/tuning/record_tuning.dart';
+import 'package:accord_memo/application/tuning/tuning_service.dart';
 import 'package:accord_memo/domain/customer/civility.dart';
 import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/customer/customer_repository.dart';
@@ -148,6 +150,7 @@ Widget _clientsApp({
   ReminderRepository? reminders,
   InMemoryTuningRepository? tunings,
   RecordTuning? recordTuning,
+  CorrectTuning? correctTuning,
   Future<DashboardSnapshot> Function()? loadDashboard,
   Future<List<HistoryEntry>> Function()? loadHistory,
 }) {
@@ -187,6 +190,22 @@ Widget _clientsApp({
               activities: InMemoryActivityRepository(pianoRepo),
             ),
       ),
+      correctTuningProvider.overrideWith(
+        (ref) =>
+            correctTuning ??
+            CorrectTuning(
+              clock: clock,
+              idGenerator: FakeIdGenerator(spareIds()),
+              transactions: const ImmediateTransactionRunner(),
+              tunings: tuningRepo,
+              pianos: pianoRepo,
+              reminders: reminderRepo,
+              activities: InMemoryActivityRepository(pianoRepo),
+            ),
+      ),
+      tuningServiceProvider.overrideWith(
+        (ref) => TuningService(tunings: tuningRepo),
+      ),
       dashboardSnapshotProvider.overrideWith((ref) {
         return loadDashboard?.call() ?? Future.value(_emptyDashboard);
       }),
@@ -222,6 +241,34 @@ Finder _recordTuningOnCard(String pianoName) {
   );
 }
 
+Finder _correctTuningOnCard(String pianoName) {
+  return find.descendant(
+    of: _pianoCard(pianoName),
+    matching: find.widgetWithText(OutlinedButton, clientsCorrectTuning),
+  );
+}
+
+Finder _tuningRowInRegisteredDialog(CalendarDate date) {
+  return find.descendant(
+    of: find.widgetWithText(AlertDialog, clientsPianoTuningsTitle),
+    matching: find.widgetWithText(ListTile, formatFrenchNumericDate(date)),
+  );
+}
+
+Finder _correctTuningDialogTitle() {
+  return find.descendant(
+    of: find.byType(AlertDialog),
+    matching: find.text(clientsCorrectTuningTitle),
+  );
+}
+
+Finder _correctTuningNotesField() {
+  return find.descendant(
+    of: find.widgetWithText(AlertDialog, clientsCorrectTuningTitle),
+    matching: find.byType(TextFormField),
+  );
+}
+
 Finder _recordTuningDialogTitle() {
   return find.descendant(
     of: find.byType(AlertDialog),
@@ -231,6 +278,25 @@ Finder _recordTuningDialogTitle() {
 
 String _lastTuningLabel(CalendarDate date) {
   return '$clientsLastTuningPrefix${formatFrenchNumericDate(date)}';
+}
+
+Future<Tuning> _insertTuning(
+  InMemoryTuningRepository tunings, {
+  required PianoId pianoId,
+  required CalendarDate date,
+  String id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+  String? notes,
+}) async {
+  final tuning = Tuning.create(
+    id: TuningId(id),
+    pianoId: pianoId,
+    tuningDate: date,
+    today: _today,
+    notes: notes,
+    now: _now,
+  );
+  await tunings.insert(tuning);
+  return tuning;
 }
 
 void main() {
@@ -569,6 +635,7 @@ void main() {
     expect(find.text(clientsRestoreAction), findsOneWidget);
     expect(find.text(clientsAddPiano), findsNothing);
     expect(find.text(clientsRecordTuning), findsNothing);
+    expect(find.text(clientsCorrectTuning), findsNothing);
   });
 
   testWidgets('distingue un piano archivé sans bouton mort', (tester) async {
@@ -611,6 +678,7 @@ void main() {
     expect(find.text('Schimmel 120'), findsOneWidget);
     expect(_recordTuningOnCard('Yamaha U1'), findsOneWidget);
     expect(_recordTuningOnCard('Schimmel 120'), findsNothing);
+    expect(_correctTuningOnCard('Schimmel 120'), findsNothing);
     expect(
       find.descendant(
         of: _pianoCard('Schimmel 120'),
@@ -1601,6 +1669,7 @@ void main() {
 
     expect(find.text(clientsAddPiano), findsNothing);
     expect(_recordTuningOnCard('Yamaha U1'), findsNothing);
+    expect(_correctTuningOnCard('Yamaha U1'), findsNothing);
     expect(
       find.descendant(
         of: _pianoCard('Yamaha U1'),
@@ -2411,6 +2480,332 @@ void main() {
     expect(_recordTuningDialogTitle(), findsOneWidget);
   });
 
+  testWidgets('masque Corriger un accord sans accord enregistré', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(
+      _piano(
+        id: '11111111-1111-4111-8111-111111111111',
+        customerId: dupont.id,
+        brand: 'Yamaha',
+        model: 'U1',
+      ),
+    );
+
+    await tester.pumpWidget(_clientsApp(customers: customers, pianos: pianos));
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(_recordTuningOnCard('Yamaha U1'), findsOneWidget);
+    expect(_correctTuningOnCard('Yamaha U1'), findsNothing);
+  });
+
+  testWidgets('masque Corriger un accord pour un client archivé', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final tunings = InMemoryTuningRepository();
+    final martin = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Martin',
+      firstName: 'Marie',
+      archived: true,
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: martin.id,
+      brand: 'Yamaha',
+      model: 'U1',
+    );
+    await customers.insert(martin);
+    await pianos.insert(yamaha);
+    await _insertTuning(
+      tunings,
+      pianoId: yamaha.id,
+      date: CalendarDate(2026, 3, 1),
+    );
+
+    await tester.pumpWidget(
+      _clientsApp(customers: customers, pianos: pianos, tunings: tunings),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text(clientsFilterArchived));
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('Marie Martin'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(_correctTuningOnCard('Yamaha U1'), findsNothing);
+  });
+
+  testWidgets('masque Corriger un accord pour un piano archivé', (tester) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final tunings = InMemoryTuningRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+      archived: true,
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+    await _insertTuning(
+      tunings,
+      pianoId: yamaha.id,
+      date: CalendarDate(2026, 3, 1),
+    );
+
+    await tester.pumpWidget(
+      _clientsApp(customers: customers, pianos: pianos, tunings: tunings),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text(clientsArchivedPianosSection));
+    await tester.pump();
+    await tester.pump();
+
+    expect(_correctTuningOnCard('Yamaha U1'), findsNothing);
+  });
+
+  testWidgets('affiche Corriger un accord quand un accord existe', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final tunings = InMemoryTuningRepository();
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+    await _insertTuning(
+      tunings,
+      pianoId: yamaha.id,
+      date: CalendarDate(2026, 3, 1),
+      notes: 'après restauration',
+    );
+
+    await tester.pumpWidget(
+      _clientsApp(customers: customers, pianos: pianos, tunings: tunings),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pump();
+    await tester.pump();
+
+    expect(_correctTuningOnCard('Yamaha U1'), findsOneWidget);
+    expect(find.text(_lastTuningLabel(CalendarDate(2026, 3, 1))), findsOneWidget);
+  });
+
+  testWidgets('ouvre Accords enregistrés puis corrige via CorrectTuning', (
+    tester,
+  ) async {
+    await _prepareDesktop(tester);
+    final customers = InMemoryCustomerRepository();
+    final pianos = InMemoryPianoRepository();
+    final tunings = InMemoryTuningRepository();
+    var dashboardLoads = 0;
+    var historyLoads = 0;
+    final dupont = _customer(
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      lastName: 'Dupont',
+      firstName: 'Jean',
+    );
+    final yamaha = _piano(
+      id: '11111111-1111-4111-8111-111111111111',
+      customerId: dupont.id,
+      brand: 'Yamaha',
+      model: 'U1',
+    );
+    await customers.insert(dupont);
+    await pianos.insert(yamaha);
+    await _insertTuning(
+      tunings,
+      pianoId: yamaha.id,
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      date: CalendarDate(2026, 3, 1),
+      notes: 'ancienne note',
+    );
+    await _insertTuning(
+      tunings,
+      pianoId: yamaha.id,
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      date: CalendarDate(2025, 1, 1),
+    );
+
+    await tester.pumpWidget(
+      _clientsApp(
+        customers: customers,
+        pianos: pianos,
+        tunings: tunings,
+        loadDashboard: () async {
+          dashboardLoads += 1;
+          return _emptyDashboard;
+        },
+        loadHistory: () async {
+          historyLoads += 1;
+          return const <HistoryEntry>[];
+        },
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(find.text('Jean Dupont'));
+    await tester.pump();
+    await tester.pump();
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(ClientsPage)),
+    );
+    container.listen(
+      dashboardSnapshotProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    container.listen(
+      historySnapshotProvider,
+      (_, _) {},
+      fireImmediately: true,
+    );
+    await tester.pump();
+    expect(dashboardLoads, 1);
+    expect(historyLoads, 1);
+
+    await tester.tap(_correctTuningOnCard('Yamaha U1'));
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(clientsPianoTuningsTitle), findsOneWidget);
+    expect(
+      _tuningRowInRegisteredDialog(CalendarDate(2026, 3, 1)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: _tuningRowInRegisteredDialog(CalendarDate(2026, 3, 1)),
+        matching: find.text('ancienne note'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      _tuningRowInRegisteredDialog(CalendarDate(2025, 1, 1)),
+      findsOneWidget,
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(AlertDialog, clientsPianoTuningsTitle),
+        matching: find.text(clientsCancel),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(clientsPianoTuningsTitle), findsNothing);
+    expect(dashboardLoads, 1);
+    expect(historyLoads, 1);
+    expect(
+      (await tunings.findById(TuningId('cccccccc-cccc-4ccc-8ccc-cccccccccccc')))!
+          .tuningDate,
+      CalendarDate(2026, 3, 1),
+    );
+
+    await tester.tap(_correctTuningOnCard('Yamaha U1'));
+    await tester.pump();
+    await tester.pump();
+    await tester.tap(_tuningRowInRegisteredDialog(CalendarDate(2026, 3, 1)));
+    await tester.pump();
+    await tester.pump();
+    expect(_correctTuningDialogTitle(), findsOneWidget);
+    expect(
+      tester.widget<TextFormField>(_correctTuningNotesField()).controller?.text,
+      'ancienne note',
+    );
+
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(AlertDialog, clientsCorrectTuningTitle),
+        matching: find.text(clientsCancel),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(_correctTuningDialogTitle(), findsNothing);
+    expect(find.text(clientsPianoTuningsTitle), findsOneWidget);
+    expect(dashboardLoads, 1);
+    expect(historyLoads, 1);
+
+    await tester.tap(_tuningRowInRegisteredDialog(CalendarDate(2026, 3, 1)));
+    await tester.pump();
+    await tester.pump();
+    expect(_correctTuningDialogTitle(), findsOneWidget);
+    await tester.enterText(_correctTuningNotesField(), 'note corrigée');
+    await tester.tap(
+      find.descendant(
+        of: find.widgetWithText(AlertDialog, clientsCorrectTuningTitle),
+        matching: find.widgetWithText(FilledButton, clientsCorrectTuningSave),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(_correctTuningDialogTitle(), findsNothing);
+    expect(find.text(clientsPianoTuningsTitle), findsOneWidget);
+    expect(
+      find.descendant(
+        of: _tuningRowInRegisteredDialog(CalendarDate(2026, 3, 1)),
+        matching: find.text('note corrigée'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.widgetWithText(AlertDialog, clientsPianoTuningsTitle),
+        matching: find.text('ancienne note'),
+      ),
+      findsNothing,
+    );
+    expect(
+      (await tunings.findById(TuningId('cccccccc-cccc-4ccc-8ccc-cccccccccccc')))!
+          .notes,
+      'note corrigée',
+    );
+    expect(dashboardLoads, 2);
+    expect(historyLoads, 2);
+    expect(find.text(_lastTuningLabel(CalendarDate(2026, 3, 1))), findsOneWidget);
+  });
+
   test('les dialogs clients passent par CustomerService', () {
     const files = [
       'lib/presentation/clients/customer_form_dialog.dart',
@@ -2443,6 +2838,8 @@ void main() {
       final source = File(path).readAsStringSync();
       expect(source.contains('pianoRepositoryProvider'), isFalse, reason: path);
       expect(source.contains('recordTuningProvider'), isFalse, reason: path);
+      expect(source.contains('correctTuningProvider'), isFalse, reason: path);
+      expect(source.contains('tuningServiceProvider'), isFalse, reason: path);
       expect(source.contains('app_database'), isFalse, reason: path);
     }
     final pianoForm = File(
@@ -2465,6 +2862,25 @@ void main() {
     expect(recordDialog.contains('dueDate'), isFalse);
     expect(recordDialog.contains('DateTime.now()'), isFalse);
 
+    final tuningsDialog = File(
+      'lib/presentation/clients/piano_tunings_dialog.dart',
+    ).readAsStringSync();
+    expect(tuningsDialog.contains('tuningServiceProvider'), isTrue);
+    expect(tuningsDialog.contains('tuningRepositoryProvider'), isFalse);
+    expect(tuningsDialog.contains('correctTuningProvider'), isFalse);
+    expect(tuningsDialog.contains('recordTuningProvider'), isFalse);
+    expect(tuningsDialog.contains('DateTime.now()'), isFalse);
+    expect(tuningsDialog.contains('app_database'), isFalse);
+
+    final correctDialog = File(
+      'lib/presentation/clients/correct_tuning_dialog.dart',
+    ).readAsStringSync();
+    expect(correctDialog.contains('correctTuningProvider'), isTrue);
+    expect(correctDialog.contains('recordTuningProvider'), isFalse);
+    expect(correctDialog.contains('tuningRepositoryProvider'), isFalse);
+    expect(correctDialog.contains('DateTime.now()'), isFalse);
+    expect(correctDialog.contains('app_database'), isFalse);
+
     final detail = File(
       'lib/presentation/clients/client_detail_pane.dart',
     ).readAsStringSync();
@@ -2472,6 +2888,8 @@ void main() {
     expect(detail.contains('dashboardSnapshotProvider'), isTrue);
     expect(detail.contains('historySnapshotProvider'), isTrue);
     expect(detail.contains('tuningRepositoryProvider'), isFalse);
+    expect(detail.contains('correctTuningProvider'), isFalse);
+    expect(detail.contains('tuningServiceProvider'), isFalse);
 
     final clientsPage = File(
       'lib/presentation/clients/clients_page.dart',

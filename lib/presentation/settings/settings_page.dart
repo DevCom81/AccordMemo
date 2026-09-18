@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/backup/backup_exceptions.dart';
 import '../../application/backup/backup_outcome.dart';
+import '../../application/ports/google_auth_session.dart';
 import '../app_providers.dart';
 import '../clients/clients_providers.dart';
 import '../history/history_providers.dart';
@@ -131,6 +132,71 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
+  Future<void> _connectGoogle({required bool reconnect}) async {
+    if (_busy) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _message = null;
+      _isError = false;
+    });
+    try {
+      final session = ref.read(googleAuthSessionProvider);
+      if (reconnect) {
+        await session.reconnect();
+      } else {
+        await session.connect();
+      }
+      ref.invalidate(googleAuthStateProvider);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _busy = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _busy = false;
+        _message = settingsMailMessage(error);
+        _isError = true;
+      });
+    }
+  }
+
+  Future<void> _disconnectGoogle() async {
+    if (_busy) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _message = null;
+      _isError = false;
+    });
+    try {
+      await ref.read(googleAuthSessionProvider).disconnect();
+      ref.invalidate(googleAuthStateProvider);
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _busy = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _busy = false;
+        _message = settingsMailMessage(error);
+        _isError = true;
+      });
+    }
+  }
+
   void _reloadAfterRestore() {
     ref.read(selectedCustomerIdProvider.notifier).clear();
     ref.invalidate(dashboardSnapshotProvider);
@@ -143,6 +209,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final location = ref.watch(appDataLocatorProvider).displayLocation;
+    final google = ref.watch(googleAuthStateProvider);
+    final googleState =
+        google.asData?.value ?? const GoogleAuthState.disconnected();
     return CustomScrollView(
       slivers: [
         SliverPadding(
@@ -204,6 +273,54 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onPressed: _busy ? null : _restore,
                     child: const Text(settingsRestoreButton),
                   ),
+                  const SizedBox(height: 36),
+                  Text(
+                    settingsMailSectionTitle,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    settingsMailAccountLabel,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  if (googleState.isConnected) ...[
+                    Text(
+                      '$settingsMailConnectedPrefix${googleState.accountEmail}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton(
+                          onPressed: _busy
+                              ? null
+                              : () => _connectGoogle(reconnect: true),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.forest,
+                            foregroundColor: AppColors.onForest,
+                          ),
+                          child: const Text(settingsMailReconnect),
+                        ),
+                        OutlinedButton(
+                          onPressed: _busy ? null : _disconnectGoogle,
+                          child: const Text(settingsMailDisconnect),
+                        ),
+                      ],
+                    ),
+                  ] else
+                    FilledButton(
+                      onPressed: _busy
+                          ? null
+                          : () => _connectGoogle(reconnect: false),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.forest,
+                        foregroundColor: AppColors.onForest,
+                      ),
+                      child: const Text(settingsMailConnect),
+                    ),
                   if (_busy) ...[
                     const SizedBox(height: 16),
                     const Row(

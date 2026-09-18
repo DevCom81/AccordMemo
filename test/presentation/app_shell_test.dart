@@ -18,6 +18,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_app_data_locator.dart';
+import '../support/fake_mail_overrides.dart';
 
 void main() {
   testWidgets('navigue vers les placeholders et recharge Aujourd’hui au retour', (
@@ -52,6 +53,7 @@ void main() {
           appDataLocatorProvider.overrideWith(
             (ref) => FakeAppDataLocator.displayOnly(),
           ),
+          ...fakeMailOverrides(),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -132,6 +134,7 @@ void main() {
           appDataLocatorProvider.overrideWith(
             (ref) => FakeAppDataLocator.displayOnly(),
           ),
+          ...fakeMailOverrides(),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -171,6 +174,7 @@ void main() {
           appDataLocatorProvider.overrideWith(
             (ref) => FakeAppDataLocator.displayOnly(),
           ),
+          ...fakeMailOverrides(),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),

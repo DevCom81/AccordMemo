@@ -13,6 +13,7 @@ import 'package:accord_memo/domain/piano/piano.dart';
 import 'package:accord_memo/domain/reminder/reminder.dart';
 import 'package:accord_memo/domain/shared/calendar_date.dart';
 import 'package:accord_memo/domain/tuning/tuning.dart';
+import 'package:accord_memo/infrastructure/google/fake_google_auth_session.dart';
 import 'package:accord_memo/infrastructure/persistence/app_database.dart';
 import 'package:accord_memo/infrastructure/persistence/drift_activity_repository.dart';
 import 'package:accord_memo/infrastructure/persistence/drift_customer_repository.dart';
@@ -35,6 +36,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import '../support/fake_app_data_locator.dart';
+import '../support/fake_mail_overrides.dart';
 import '../support/fake_file_location_picker.dart';
 import '../support/fake_id_generator.dart';
 import '../support/file_app_database.dart';
@@ -77,6 +79,45 @@ void main() {
       find.text('Cette section sera disponible prochainement.'),
       findsNothing,
     );
+    expect(find.text(settingsMailSectionTitle), findsOneWidget);
+    expect(find.text(settingsMailConnect), findsOneWidget);
+  });
+
+  testWidgets('connecte puis déconnecte un compte Gmail factice', (tester) async {
+    await prepareDesktop(tester);
+    final google = FakeGoogleAuthSession.disconnected();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardSnapshotProvider.overrideWith((ref) async => _emptyDashboard),
+          clientsSearchProvider.overrideWith((ref) async => <Customer>[]),
+          historySnapshotProvider.overrideWith(
+            (ref) async => const <HistoryEntry>[],
+          ),
+          appDataLocatorProvider.overrideWith(
+            (ref) => FakeAppDataLocator.displayOnly(),
+          ),
+          ...fakeMailOverrides(google: google),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: const AppShell(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paramètres'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(settingsMailConnect));
+    await tester.pumpAndSettle();
+    expect(google.connectCalls, 1);
+    expect(find.text('${settingsMailConnectedPrefix}eleonore@example.com'), findsOneWidget);
+
+    await tester.tap(find.text(settingsMailDisconnect));
+    await tester.pumpAndSettle();
+    expect(google.disconnectCalls, 1);
+    expect(find.text(settingsMailConnect), findsOneWidget);
   });
 
   testWidgets('annuler Enregistrer sous ne change rien et n’affiche pas d’erreur', (
@@ -323,6 +364,7 @@ Widget _idleSettingsApp({required FileLocationPicker picker}) {
       fileLocationPickerProvider.overrideWith((ref) => picker),
       clockProvider.overrideWith((ref) => _clock),
       appDatabaseSessionProvider.overrideWith((ref) => const _IdleSession()),
+      ...fakeMailOverrides(),
     ],
     child: MaterialApp(
       theme: buildAppTheme(),
@@ -355,6 +397,7 @@ Widget _displaySettingsApp() {
       appDataLocatorProvider.overrideWith(
         (ref) => FakeAppDataLocator.displayOnly(),
       ),
+      ...fakeMailOverrides(),
     ],
     child: MaterialApp(
       theme: buildAppTheme(),
@@ -378,6 +421,7 @@ Widget _liveSettingsApp({
       fileLocationPickerProvider.overrideWith((ref) => picker),
       clockProvider.overrideWith((ref) => _clock),
       idGeneratorProvider.overrideWith((ref) => FakeIdGenerator(spareIds())),
+      ...fakeMailOverrides(),
     ],
     child: MaterialApp(
       theme: buildAppTheme(),

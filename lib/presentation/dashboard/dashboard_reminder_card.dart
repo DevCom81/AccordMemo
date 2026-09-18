@@ -18,12 +18,16 @@ class DashboardReminderCard extends StatelessWidget {
     required this.today,
     required this.bucket,
     required this.onReschedule,
+    this.onSendReminder,
+    this.sendDisabledReason = dashboardSendReminderGoogleDisconnected,
   });
 
   final DashboardReminder reminder;
   final CalendarDate today;
   final DashboardReminderBucket bucket;
   final VoidCallback onReschedule;
+  final VoidCallback? onSendReminder;
+  final String sendDisabledReason;
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +83,11 @@ class DashboardReminderCard extends StatelessWidget {
       relativeLabel: dueRelative,
       dueColor: dueColor,
     );
-    final actions = _ActionColumn(onReschedule: onReschedule);
+    final actions = _ActionColumn(
+      onReschedule: onReschedule,
+      onSendReminder: onSendReminder,
+      sendDisabledReason: sendDisabledReason,
+    );
 
     return Semantics(
       container: true,
@@ -239,25 +247,33 @@ class _DueColumn extends StatelessWidget {
 }
 
 class _ActionColumn extends StatelessWidget {
-  const _ActionColumn({required this.onReschedule});
+  const _ActionColumn({
+    required this.onReschedule,
+    required this.onSendReminder,
+    required this.sendDisabledReason,
+  });
 
   final VoidCallback onReschedule;
+  final VoidCallback? onSendReminder;
+  final String sendDisabledReason;
 
   @override
   Widget build(BuildContext context) {
+    final canSend = onSendReminder != null;
+    final tooltip = canSend ? dashboardSendReminderTitle : sendDisabledReason;
     return IntrinsicWidth(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Tooltip(
-            message: sendReminderComingSoonMessage,
+            message: tooltip,
             child: Semantics(
               button: true,
-              enabled: false,
+              enabled: canSend,
               label: 'Envoyer le rappel',
-              hint: sendReminderComingSoonMessage,
+              hint: tooltip,
               child: FilledButton(
-                onPressed: null,
+                onPressed: onSendReminder,
                 style: FilledButton.styleFrom(
                   disabledBackgroundColor: AppColors.copper.withValues(
                     alpha: 0.58,

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'application/dev/seed_demo_dashboard.dart';
+import 'infrastructure/email/fake_email_sender.dart';
+import 'infrastructure/google/fake_google_auth_session.dart';
 import 'infrastructure/ids/uuid_id_generator.dart';
 import 'infrastructure/persistence/app_database.dart';
 import 'infrastructure/persistence/drift_activity_repository.dart';
@@ -14,6 +16,7 @@ import 'infrastructure/persistence/drift_tuning_repository.dart';
 import 'infrastructure/time/system_clock.dart';
 import 'main.dart';
 import 'presentation/app_database_holder.dart';
+import 'presentation/app_providers.dart';
 import 'presentation/dev/demo_mode.dart';
 
 Future<void> main() async {
@@ -49,6 +52,12 @@ Future<void> main() async {
       overrides: [
         demoModeProvider.overrideWith((ref) => true),
         appDatabaseOpenerProvider.overrideWith((ref) => openDemoAppDatabase),
+        googleAuthSessionProvider.overrideWith(
+          (ref) => FakeGoogleAuthSession.connected(
+            accountEmail: 'demo@pianosoccitanie.fr',
+          ),
+        ),
+        emailSenderProvider.overrideWith((ref) => FakeEmailSender()),
       ],
       child: const AccordMemoApp(),
     ),
