@@ -93,34 +93,42 @@ class _Sidebar extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _Brand(),
-                if (isDemo) ...[
-                  const SizedBox(height: 12),
-                  const _DemoBadge(),
-                ],
-                const SizedBox(height: 36),
-                _NavItem(
-                  label: 'Aujourd’hui',
-                  selected: destination == AppDestination.today,
-                  badgeCount: badgeCount,
-                  onPressed: () => onSelect(AppDestination.today),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const _Brand(),
+                        if (isDemo) ...[
+                          const SizedBox(height: 12),
+                          const _DemoBadge(),
+                        ],
+                        const SizedBox(height: 36),
+                        _NavItem(
+                          label: 'Aujourd’hui',
+                          selected: destination == AppDestination.today,
+                          badgeCount: badgeCount,
+                          onPressed: () => onSelect(AppDestination.today),
+                        ),
+                        _NavItem(
+                          label: 'Clients & Pianos',
+                          selected: destination == AppDestination.clients,
+                          onPressed: () => onSelect(AppDestination.clients),
+                        ),
+                        _NavItem(
+                          label: 'Historique',
+                          selected: destination == AppDestination.history,
+                          onPressed: () => onSelect(AppDestination.history),
+                        ),
+                        _NavItem(
+                          label: 'Paramètres',
+                          selected: destination == AppDestination.settings,
+                          onPressed: () => onSelect(AppDestination.settings),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                _NavItem(
-                  label: 'Clients & Pianos',
-                  selected: destination == AppDestination.clients,
-                  onPressed: () => onSelect(AppDestination.clients),
-                ),
-                _NavItem(
-                  label: 'Historique',
-                  selected: destination == AppDestination.history,
-                  onPressed: () => onSelect(AppDestination.history),
-                ),
-                _NavItem(
-                  label: 'Paramètres',
-                  selected: destination == AppDestination.settings,
-                  onPressed: () => onSelect(AppDestination.settings),
-                ),
-                const Spacer(),
                 Text(
                   'Saison 2026-2027',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(

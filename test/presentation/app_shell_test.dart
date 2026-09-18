@@ -105,4 +105,41 @@ void main() {
     expect(find.text('DÉMO'), findsOneWidget);
     expect(find.bySemanticsLabel('Mode démonstration'), findsOneWidget);
   });
+
+  testWidgets('n’overflow pas lorsque la sidebar n’a que ~289 px de haut', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 337);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final empty = DashboardSnapshot(
+      today: CalendarDate(2026, 9, 17),
+      overdue: const [],
+      dueSoon: const [],
+      upcoming: const [],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          dashboardSnapshotProvider.overrideWith((ref) async => empty),
+          clientsSearchProvider.overrideWith((ref) async => <Customer>[]),
+        ],
+        child: MaterialApp(
+          theme: buildAppTheme(),
+          home: const AppShell(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Aujourd’hui'), findsOneWidget);
+    expect(find.text('Clients & Pianos'), findsOneWidget);
+    expect(find.text('Historique'), findsOneWidget);
+    expect(find.text('Paramètres'), findsOneWidget);
+    expect(find.text('Saison 2026-2027'), findsOneWidget);
+  });
 }
