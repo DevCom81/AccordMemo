@@ -1,7 +1,9 @@
 import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
+import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/shared/calendar_date.dart';
 import 'package:accord_memo/main.dart';
 import 'package:accord_memo/presentation/app_providers.dart';
+import 'package:accord_memo/presentation/clients/clients_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,6 +26,7 @@ void main() {
               upcoming: const [],
             );
           }),
+          clientsSearchProvider.overrideWith((ref) async => <Customer>[]),
         ],
         child: const AccordMemoApp(),
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app_providers.dart';
+import '../clients/clients_page.dart';
 import '../dashboard/dashboard_page.dart';
 import '../dev/demo_mode.dart';
 import '../placeholders/coming_soon_page.dart';
@@ -54,7 +55,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                   DashboardPage(
                     onSeeAllClients: () => _select(AppDestination.clients),
                   ),
-                  const ComingSoonPage(title: 'Clients & Pianos'),
+                  const ClientsPage(),
                   const ComingSoonPage(title: 'Historique'),
                   const ComingSoonPage(title: 'Paramètres'),
                 ],

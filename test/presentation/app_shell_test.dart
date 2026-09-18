@@ -1,6 +1,9 @@
 import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
+import 'package:accord_memo/domain/customer/customer.dart';
 import 'package:accord_memo/domain/shared/calendar_date.dart';
 import 'package:accord_memo/presentation/app_providers.dart';
+import 'package:accord_memo/presentation/clients/clients_providers.dart';
+import 'package:accord_memo/presentation/clients/clients_strings.dart';
 import 'package:accord_memo/presentation/dashboard/dashboard_strings.dart';
 import 'package:accord_memo/presentation/dev/demo_mode.dart';
 import 'package:accord_memo/presentation/shell/app_shell.dart';
@@ -33,6 +36,7 @@ void main() {
             loads += 1;
             return empty;
           }),
+          clientsSearchProvider.overrideWith((ref) async => <Customer>[]),
         ],
         child: MaterialApp(
           theme: buildAppTheme(),
@@ -47,9 +51,10 @@ void main() {
 
     await tester.tap(find.text('Clients & Pianos'));
     await tester.pumpAndSettle();
+    expect(find.text(clientsEmptyActiveTitle), findsOneWidget);
     expect(
       find.text('Cette section sera disponible prochainement.'),
-      findsOneWidget,
+      findsNothing,
     );
     expect(loads, 1);
 
@@ -86,6 +91,7 @@ void main() {
       ProviderScope(
         overrides: [
           dashboardSnapshotProvider.overrideWith((ref) async => empty),
+          clientsSearchProvider.overrideWith((ref) async => <Customer>[]),
           demoModeProvider.overrideWith((ref) => true),
         ],
         child: MaterialApp(
