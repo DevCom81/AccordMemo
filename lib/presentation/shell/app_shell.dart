@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app_providers.dart';
 import '../dashboard/dashboard_page.dart';
+import '../dev/demo_mode.dart';
 import '../placeholders/coming_soon_page.dart';
 import '../theme/app_colors.dart';
 import 'app_destinations.dart';
@@ -33,6 +34,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       data: (snapshot) => snapshot.badgeCount,
       orElse: () => 0,
     );
+    final isDemo = ref.watch(demoModeProvider);
 
     return Scaffold(
       body: Row(
@@ -40,6 +42,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           _Sidebar(
             destination: _destination,
             badgeCount: badgeCount,
+            isDemo: isDemo,
             onSelect: _select,
           ),
           Expanded(
@@ -68,11 +71,13 @@ class _Sidebar extends StatelessWidget {
   const _Sidebar({
     required this.destination,
     required this.badgeCount,
+    required this.isDemo,
     required this.onSelect,
   });
 
   final AppDestination destination;
   final int badgeCount;
+  final bool isDemo;
   final ValueChanged<AppDestination> onSelect;
 
   @override
@@ -88,6 +93,10 @@ class _Sidebar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const _Brand(),
+                if (isDemo) ...[
+                  const SizedBox(height: 12),
+                  const _DemoBadge(),
+                ],
                 const SizedBox(height: 36),
                 _NavItem(
                   label: 'Aujourd’hui',
@@ -229,6 +238,36 @@ class _NavItem extends StatelessWidget {
                       ),
                     ),
                 ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DemoBadge extends StatelessWidget {
+  const _DemoBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Mode démonstration',
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.copper,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: ExcludeSemantics(
+            child: Text(
+              'DÉMO',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Colors.white,
+                fontSize: 11,
+                letterSpacing: 0.6,
               ),
             ),
           ),

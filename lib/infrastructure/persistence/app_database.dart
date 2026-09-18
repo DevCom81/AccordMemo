@@ -124,3 +124,20 @@ AppDatabase openProductionAppDatabase({
     }),
   );
 }
+
+AppDatabase openDemoAppDatabase({
+  SqliteDatabasePath location = const SqliteDatabasePath(),
+}) {
+  return AppDatabase(
+    LazyDatabase(() async {
+      final file = location.resolveDemoFromEnvironment();
+      await file.parent.create(recursive: true);
+      return NativeDatabase.createInBackground(
+        file,
+        setup: (database) {
+          database.execute('PRAGMA journal_mode = WAL');
+        },
+      );
+    }),
+  );
+}

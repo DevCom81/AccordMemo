@@ -23,4 +23,35 @@ void main() {
       throwsA(isA<MissingAppDataException>()),
     );
   });
+
+  test('résout un fichier démo distinct de la production', () {
+    final appDataRoot = p.join('tmp', 'fake-appdata');
+    final production = location.resolve(appDataRoot);
+    final demo = location.resolveDemo(appDataRoot);
+
+    expect(
+      demo.path,
+      p.join(
+        appDataRoot,
+        SqliteDatabasePath.directoryName,
+        SqliteDatabasePath.demoFileName,
+      ),
+    );
+    expect(demo.path, isNot(production.path));
+  });
+
+  test('refuse une racine APPDATA absente ou vide pour la démo', () {
+    expect(
+      () => location.resolveDemo(null),
+      throwsA(isA<MissingAppDataException>()),
+    );
+    expect(
+      () => location.resolveDemo(''),
+      throwsA(isA<MissingAppDataException>()),
+    );
+    expect(
+      () => location.resolveDemo('   '),
+      throwsA(isA<MissingAppDataException>()),
+    );
+  });
 }
