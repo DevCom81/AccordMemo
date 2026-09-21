@@ -92,10 +92,17 @@ dart fix
 dart format
 ```
 
+The agent provides the required commands and explains their purpose.
+
+The developer executes them manually.
+
+This rule does not replace automated tests or CI/CD.
+
 ## 4. Architecture
 
 The application follows four main layers:
 
+```text
 presentation
     |
     v
@@ -105,9 +112,11 @@ application
 domain
 
 infrastructure -> implements ports required by domain/application
+```
 
 Current structure:
 
+```text
 lib/
 ├── application/
 ├── domain/
@@ -115,6 +124,7 @@ lib/
 ├── presentation/
 ├── main.dart
 └── main_demo.dart
+```
 
 Dependencies must point toward the business core.
 
@@ -122,39 +132,39 @@ The domain must not depend on Flutter, Drift, SQLite, Gmail, Google APIs, Window
 
 ## 5. Domain layer
 
-lib/domain/
+`lib/domain/`
 
 The domain contains business concepts and business rules.
 
 Examples:
 
-Customer
-Piano
-Tuning
-Reminder
-Activity
-CalendarDate
+- Customer
+- Piano
+- Tuning
+- Reminder
+- Activity
+- CalendarDate
 
 The domain may contain:
 
-entities
-value objects
-domain rules
-repository contracts
-domain-specific types
+- entities
+- value objects
+- domain rules
+- repository contracts
+- domain-specific types
 
 The domain must remain framework-independent.
 
 Do not import:
 
-Flutter
-Drift
-SQLite
-Gmail APIs
-Google APIs
-Windows-specific libraries
-presentation code
-infrastructure implementations
+- Flutter
+- Drift
+- SQLite
+- Gmail APIs
+- Google APIs
+- Windows-specific libraries
+- presentation code
+- infrastructure implementations
 
 Business invariants belong here when they are intrinsic to the domain.
 
@@ -162,20 +172,20 @@ Invalid domain states should be prevented whenever reasonably possible.
 
 ## 6. Application layer
 
-lib/application/
+`lib/application/`
 
 The application layer coordinates use cases.
 
 Examples include:
 
-customer management
-piano management
-recording a tuning
-correcting a tuning
-reminder lifecycle
-sending reminder emails
-dashboard queries
-backup orchestration
+- customer management
+- piano management
+- recording a tuning
+- correcting a tuning
+- reminder lifecycle
+- sending reminder emails
+- dashboard queries
+- backup orchestration
 
 Application code may depend on domain abstractions and application ports.
 
@@ -183,19 +193,19 @@ External systems must be accessed through explicit ports when abstraction provid
 
 Current examples include:
 
-EmailSender
-GoogleAuthSession
-IdGenerator
-SecretStore
-TransactionRunner
+- EmailSender
+- GoogleAuthSession
+- IdGenerator
+- SecretStore
+- TransactionRunner
 
 Use cases should describe business intentions rather than technical operations.
 
 Prefer names such as:
 
-RecordTuning
-SendReminder
-CorrectTuning
+- RecordTuning
+- SendReminder
+- CorrectTuning
 
 over implementation-oriented names.
 
@@ -203,20 +213,20 @@ Do not move business rules into the presentation layer.
 
 ## 7. Infrastructure layer
 
-lib/infrastructure/
+`lib/infrastructure/`
 
 Infrastructure contains technical implementations of contracts required by the core application.
 
 Examples include:
 
-Drift repositories
-SQLite database
-Gmail email sender
-Google OAuth
-UUID generation
-secure credential storage
-filesystem backup
-system clock
+- Drift repositories
+- SQLite database
+- Gmail email sender
+- Google OAuth
+- UUID generation
+- secure credential storage
+- filesystem backup
+- system clock
 
 Infrastructure may depend on external frameworks and libraries.
 
@@ -228,20 +238,20 @@ Do not allow Drift-generated objects or external API models to leak into the dom
 
 ## 8. Presentation layer
 
-lib/presentation/
+`lib/presentation/`
 
 Presentation contains Flutter UI and presentation-specific state.
 
 It may contain:
 
-pages
-dialogs
-widgets
-providers
-formatters
-UI strings
-presentation error mapping
-navigation
+- pages
+- dialogs
+- widgets
+- providers
+- formatters
+- UI strings
+- presentation error mapping
+- navigation
 
 Presentation should call application use cases or services.
 
@@ -259,19 +269,21 @@ An interface must have a concrete reason to exist.
 
 Good reasons include:
 
-isolating an external dependency
-enabling deterministic tests
-replacing infrastructure implementations
-protecting the domain from framework dependencies
-representing a meaningful architectural boundary
+- isolating an external dependency
+- enabling deterministic tests
+- replacing infrastructure implementations
+- protecting the domain from framework dependencies
+- representing a meaningful architectural boundary
 
 Current examples:
 
+```text
 Clock -> SystemClock
 IdGenerator -> UuidIdGenerator
 EmailSender -> GmailEmailSender
 SecretStore -> FlutterSecureSecretStore
 Repository -> DriftRepository
+```
 
 Do not create interfaces merely because an implementation exists.
 
@@ -283,23 +295,23 @@ Avoid architecture for architecture's sake.
 
 Apply SOLID pragmatically.
 
-Single Responsibility
+### Single Responsibility
 
 Classes should have a clear reason to change.
 
-Open/Closed
+### Open/Closed
 
 Prefer extension through existing boundaries when appropriate, but do not introduce unnecessary abstraction for hypothetical future requirements.
 
-Liskov Substitution
+### Liskov Substitution
 
 Implementations must respect the behavioral contract of their abstractions.
 
-Interface Segregation
+### Interface Segregation
 
 Prefer focused ports over large generic interfaces.
 
-Dependency Inversion
+### Dependency Inversion
 
 Business code depends on abstractions at meaningful external boundaries.
 
@@ -311,12 +323,12 @@ The application uses Drift with SQLite.
 
 Persistence rules:
 
-persistence models must not become domain models
-mapping must remain explicit
-schema changes require migrations
-existing user data must be preserved
-migration behavior must be tested
-database changes must consider upgrade paths from existing installations
+- persistence models must not become domain models
+- mapping must remain explicit
+- schema changes require migrations
+- existing user data must be preserved
+- migration behavior must be tested
+- database changes must consider upgrade paths from existing installations
 
 Never assume that deleting and recreating the database is acceptable.
 
@@ -336,7 +348,7 @@ Time-dependent business logic must be testable.
 
 Use the domain Clock abstraction rather than reading system time directly inside business logic.
 
-Avoid hidden dependencies on DateTime.now().
+Avoid hidden dependencies on `DateTime.now()`.
 
 ## 13. Testing
 
@@ -344,32 +356,34 @@ Tests are part of the design, not an afterthought.
 
 The project contains tests at several levels:
 
+```text
 test/domain/
 test/application/
 test/infrastructure/
 test/presentation/
 test/support/
+```
 
 When changing behavior:
 
-identify existing tests affected by the change
-update them when the expected behavior legitimately changes
-add tests for new business rules
-add regression tests for bugs when appropriate
-test failure cases, not only successful paths
-preserve deterministic behavior
+- identify existing tests affected by the change
+- update them when the expected behavior legitimately changes
+- add tests for new business rules
+- add regression tests for bugs when appropriate
+- test failure cases, not only successful paths
+- preserve deterministic behavior
 
 Use fakes and in-memory implementations where they improve isolation.
 
 Current examples include:
 
-FixedClock
-FakeIdGenerator
-InMemoryCustomerRepository
-InMemoryPianoRepository
-InMemoryReminderRepository
-InMemoryTuningRepository
-InMemorySecretStore
+- FixedClock
+- FakeIdGenerator
+- InMemoryCustomerRepository
+- InMemoryPianoRepository
+- InMemoryReminderRepository
+- InMemoryTuningRepository
+- InMemorySecretStore
 
 Database migrations must be tested.
 
@@ -383,12 +397,12 @@ Security must be considered during design, not added after implementation.
 
 Never commit:
 
-passwords
-API keys
-OAuth secrets
-access tokens
-refresh tokens
-private credentials
+- passwords
+- API keys
+- OAuth secrets
+- access tokens
+- refresh tokens
+- private credentials
 
 Secrets must not be hard-coded in source files.
 
@@ -404,13 +418,14 @@ Do not expose implementation details or credentials through user-facing errors.
 
 When adding an external dependency or API integration, consider:
 
-permissions
-credential storage
-token lifecycle
-error handling
-offline behavior
-data exposure
-failure recovery
+- permissions
+- credential storage
+- token lifecycle
+- error handling
+- offline behavior
+- data exposure
+- failure recovery
+
 ## 15. Error handling
 
 Errors should be handled at the layer where they can be meaningfully interpreted.
@@ -431,7 +446,7 @@ Generated files must not be manually edited.
 
 Example:
 
-app_database.g.dart
+`app_database.g.dart`
 
 Modify the source definition and regenerate the file using the appropriate command.
 
@@ -441,24 +456,24 @@ The agent must propose the generation command rather than executing it unless ex
 
 Prefer:
 
-explicit code
-small focused classes
-meaningful names
-immutable state where practical
-deterministic behavior
-clear dependency boundaries
-simple control flow
+- explicit code
+- small focused classes
+- meaningful names
+- immutable state where practical
+- deterministic behavior
+- clear dependency boundaries
+- simple control flow
 
 Avoid:
 
-premature generalization
-unnecessary inheritance
-generic "manager" classes
-giant services
-hidden side effects
-duplicated business rules
-framework dependencies inside the domain
-abstractions without a concrete purpose
+- premature generalization
+- unnecessary inheritance
+- generic "manager" classes
+- giant services
+- hidden side effects
+- duplicated business rules
+- framework dependencies inside the domain
+- abstractions without a concrete purpose
 
 Comments should explain why something exists when the reason is not obvious.
 
@@ -470,10 +485,10 @@ Do not mix large unrelated refactors with feature development.
 
 When significant technical debt is discovered:
 
-Identify it.
-Explain its impact.
-Determine whether it blocks the requested change.
-Propose a separate refactoring when appropriate.
+- Identify it.
+- Explain its impact.
+- Determine whether it blocks the requested change.
+- Propose a separate refactoring when appropriate.
 
 Do not rewrite working architecture simply because another approach is possible.
 
@@ -481,13 +496,13 @@ Do not rewrite working architecture simply because another approach is possible.
 
 When challenging an existing decision, structure the discussion around:
 
-Problem
-Current approach
-Risk or limitation
-Possible alternatives
-Advantages
-Drawbacks
-Recommendation
+- Problem
+- Current approach
+- Risk or limitation
+- Possible alternatives
+- Advantages
+- Drawbacks
+- Recommendation
 
 A recommendation is not a decision.
 
@@ -501,30 +516,34 @@ Do not mix unrelated concerns in the same implementation when they can reasonabl
 
 Before proposing a commit:
 
-identify the actual scope of the change
-verify that unrelated files were not modified
-identify generated files separately
-identify configuration or dependency changes explicitly
-summarize architectural consequences when relevant
+- identify the actual scope of the change
+- verify that unrelated files were not modified
+- identify generated files separately
+- identify configuration or dependency changes explicitly
+- summarize architectural consequences when relevant
 
 Commit messages should describe intent rather than implementation noise.
 
 Prefer conventional, meaningful messages such as:
 
+```text
 feat: add reminder lifecycle
 fix: prevent duplicate reminder scheduling
 test: cover tuning correction failure cases
 refactor: isolate Gmail authentication
 build: prepare Windows installer
+```
 
 Avoid messages such as:
 
+```text
 update
 changes
 fix stuff
 final
 working
 test2
+```
 
 Do not rewrite published Git history merely to make it appear cleaner.
 
@@ -536,12 +555,12 @@ Do not add a dependency automatically because it solves a small implementation p
 
 Before introducing a package:
 
-Explain why it is needed.
-Check whether the existing stack already solves the problem.
-Consider maintenance and platform implications.
-Consider security implications.
-Consider whether a small local implementation would be simpler.
-Ask for approval.
+- Explain why it is needed.
+- Check whether the existing stack already solves the problem.
+- Consider maintenance and platform implications.
+- Consider security implications.
+- Consider whether a small local implementation would be simpler.
+- Ask for approval.
 
 Dependencies must serve the application, not replace basic engineering judgment.
 
@@ -551,13 +570,13 @@ A technically correct feature can still be a failed feature.
 
 Before considering a feature complete, verify:
 
-does it solve the original business problem?
-is the workflow understandable for the actual user?
-are failure states handled?
-can existing data survive the change?
-is the behavior testable?
-does the solution introduce unnecessary complexity?
-are external dependencies justified?
+- does it solve the original business problem?
+- is the workflow understandable for the actual user?
+- are failure states handled?
+- can existing data survive the change?
+- is the behavior testable?
+- does the solution introduce unnecessary complexity?
+- are external dependencies justified?
 
 Do not optimize solely for technical elegance.
 
@@ -571,17 +590,17 @@ A change is not complete merely because the code compiles.
 
 Depending on the scope, completion should consider:
 
-business behavior implemented
-domain invariants preserved
-architecture boundaries respected
-relevant tests added or updated
-failure paths considered
-persistence migrations handled when required
-sensitive information protected
-user-facing errors understandable
-generated code updated when required
-validation commands identified
-documentation updated when the behavior or architecture materially changes
+- business behavior implemented
+- domain invariants preserved
+- architecture boundaries respected
+- relevant tests added or updated
+- failure paths considered
+- persistence migrations handled when required
+- sensitive information protected
+- user-facing errors understandable
+- generated code updated when required
+- validation commands identified
+- documentation updated when the behavior or architecture materially changes
 
 The agent must clearly state anything that remains unverified.
 
@@ -597,13 +616,13 @@ The objective is not to produce the most sophisticated codebase possible.
 
 The objective is to produce software that is:
 
-correct
-understandable
-maintainable
-testable
-secure
-reliable
-proportionate to the problem
+- correct
+- understandable
+- maintainable
+- testable
+- secure
+- reliable
+- proportionate to the problem
 
 Understand the problem first.
 
