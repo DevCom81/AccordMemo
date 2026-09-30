@@ -52,5 +52,10 @@ app.*.map.json
 .env.*
 !.env.example
 
+# Android signing credentials
+*.jks
+*.keystore
+key.properties
+
 # Windows installer output (the .iss stays versioned)
 /dist/
