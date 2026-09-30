@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/history/history_entry.dart';
 import '../../application/history/history_kind.dart';
 import '../theme/app_colors.dart';
+import '../layout/adaptive_layout.dart';
 import 'history_event_card.dart';
 import 'history_providers.dart';
 import 'history_strings.dart';
@@ -112,41 +113,47 @@ class _HistoryFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SegmentedButton<HistoryKindFilter>(
-      segments: const [
-        ButtonSegment(
-          value: HistoryKindFilter.all,
-          label: Text(historyFilterAll),
-        ),
-        ButtonSegment(
-          value: HistoryKindFilter.tunings,
-          label: Text(historyFilterTunings),
-        ),
-        ButtonSegment(
-          value: HistoryKindFilter.reminders,
-          label: Text(historyFilterReminders),
-        ),
-      ],
-      selected: {filter},
-      onSelectionChanged: (next) {
-        if (next.isNotEmpty) {
-          onFilter(next.single);
-        }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SegmentedButton<HistoryKindFilter>(
+          direction: constraints.maxWidth < AppLayout.compactWidth
+              ? Axis.vertical : Axis.horizontal,
+          segments: const [
+            ButtonSegment(
+              value: HistoryKindFilter.all,
+              label: Text(historyFilterAll),
+            ),
+            ButtonSegment(
+              value: HistoryKindFilter.tunings,
+              label: Text(historyFilterTunings),
+            ),
+            ButtonSegment(
+              value: HistoryKindFilter.reminders,
+              label: Text(historyFilterReminders),
+            ),
+          ],
+          selected: {filter},
+          onSelectionChanged: (next) {
+            if (next.isNotEmpty) {
+              onFilter(next.single);
+            }
+          },
+          style: ButtonStyle(
+            foregroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return AppColors.onForest;
+              }
+              return AppColors.forest;
+            }),
+            backgroundColor: WidgetStateProperty.resolveWith((states) {
+              if (states.contains(WidgetState.selected)) {
+                return AppColors.forest;
+              }
+              return AppColors.card;
+            }),
+          ),
+        );
       },
-      style: ButtonStyle(
-        foregroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return AppColors.onForest;
-          }
-          return AppColors.forest;
-        }),
-        backgroundColor: WidgetStateProperty.resolveWith((states) {
-          if (states.contains(WidgetState.selected)) {
-            return AppColors.forest;
-          }
-          return AppColors.card;
-        }),
-      ),
     );
   }
 }
@@ -195,17 +202,19 @@ class _HistoryStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(40, 36, 40, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            historyPageTitle,
-            style: Theme.of(context).textTheme.headlineLarge,
-          ),
-          Expanded(child: Center(child: child)),
-        ],
+    return ScrollableStatus(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(40, 36, 40, 40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(historyPageTitle,
+                style: Theme.of(context).textTheme.headlineLarge),
+            const SizedBox(height: 24),
+            Center(child: child),
+          ],
+        ),
       ),
     );
   }

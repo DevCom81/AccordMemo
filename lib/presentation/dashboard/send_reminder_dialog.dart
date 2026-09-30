@@ -142,6 +142,7 @@ class _SendReminderDialogState extends State<_SendReminderDialog> {
   Widget build(BuildContext context) {
     final preview = _preview;
     return AlertDialog(
+      scrollable: true,
       title: const Text(dashboardSendReminderTitle),
       content: SizedBox(
         width: 480,
@@ -178,12 +179,7 @@ class _SendReminderDialogState extends State<_SendReminderDialog> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 8),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(maxHeight: 240),
-                      child: SingleChildScrollView(
-                        child: SelectableText(preview.body),
-                      ),
-                    ),
+                    SelectableText(preview.body),
                   ],
                   if (_sending) ...[
                     const SizedBox(height: 16),
@@ -195,7 +191,7 @@ class _SendReminderDialogState extends State<_SendReminderDialog> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                         SizedBox(width: 12),
-                        Text(dashboardSendReminderSending),
+                        Expanded(child: Text(dashboardSendReminderSending)),
                       ],
                     ),
                   ],

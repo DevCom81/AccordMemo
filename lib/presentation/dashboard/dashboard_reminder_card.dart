@@ -5,11 +5,11 @@ import '../../application/dashboard/dashboard_reminder.dart';
 import '../../domain/shared/calendar_date.dart';
 import '../formatters/french_date_label.dart';
 import '../theme/app_colors.dart';
+import '../layout/adaptive_layout.dart';
 import 'dashboard_strings.dart';
 
 enum DashboardReminderBucket { overdue, dueSoon, upcoming }
 
-const _cardCompactBreakpoint = 680.0;
 
 class DashboardReminderCard extends StatelessWidget {
   const DashboardReminderCard({
@@ -100,7 +100,7 @@ class DashboardReminderCard extends StatelessWidget {
         ),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final compact = constraints.maxWidth < _cardCompactBreakpoint;
+            final compact = constraints.maxWidth < AppLayout.compactWidth;
             if (compact) {
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -116,14 +116,9 @@ class DashboardReminderCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(child: due),
-                        const SizedBox(width: 12),
-                        actions,
-                      ],
-                    ),
+                    due,
+                    const SizedBox(height: 12),
+                    actions,
                   ],
                 ),
               );

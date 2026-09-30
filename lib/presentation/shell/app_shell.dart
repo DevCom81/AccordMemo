@@ -7,6 +7,7 @@ import '../dashboard/dashboard_page.dart';
 import '../dev/demo_mode.dart';
 import '../history/history_page.dart';
 import '../history/history_providers.dart';
+import '../layout/adaptive_layout.dart';
 import '../settings/settings_page.dart';
 import '../theme/app_colors.dart';
 import 'app_destinations.dart';
@@ -22,6 +23,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   var _destination = AppDestination.today;
 
   void _select(AppDestination destination) {
+    FocusManager.instance.primaryFocus?.unfocus();
     if (destination == AppDestination.today &&
         _destination != AppDestination.today) {
       ref.invalidate(dashboardSnapshotProvider);
@@ -43,33 +45,65 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
     final isDemo = ref.watch(demoModeProvider);
 
-    return Scaffold(
-      body: Row(
-        children: [
-          _Sidebar(
-            destination: _destination,
-            badgeCount: badgeCount,
-            isDemo: isDemo,
-            onSelect: _select,
-          ),
-          Expanded(
-            child: ColoredBox(
-              color: AppColors.ivory,
-              child: IndexedStack(
-                index: _destination.index,
-                children: [
-                  DashboardPage(
-                    onSeeAllClients: () => _select(AppDestination.clients),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sidebarVisible = constraints.maxWidth >=
+            AppLayout.masterDetailWidth + AppLayout.sidebarWidth;
+        return Scaffold(
+          appBar: sidebarVisible
+              ? null
+              : AppBar(
+                  title: Text(switch (_destination) {
+                    AppDestination.today => 'Aujourd’hui',
+                    AppDestination.clients => 'Clients & Pianos',
+                    AppDestination.history => 'Historique',
+                    AppDestination.settings => 'Paramètres',
+                  }),
+                ),
+          drawer: sidebarVisible
+              ? null
+              : Drawer(
+                  child: _Sidebar(
+                    destination: _destination,
+                    badgeCount: badgeCount,
+                    isDemo: isDemo,
+                    onSelect: (destination) {
+                      Navigator.of(context).pop();
+                      _select(destination);
+                    },
                   ),
-                  const ClientsPage(),
-                  const HistoryPage(),
-                  const SettingsPage(),
-                ],
-              ),
+                ),
+          body: SafeArea(
+            child: Row(
+              children: [
+                if (sidebarVisible)
+                  _Sidebar(
+                    destination: _destination,
+                    badgeCount: badgeCount,
+                    isDemo: isDemo,
+                    onSelect: _select,
+                  ),
+                Expanded(
+                  child: ColoredBox(
+                    color: AppColors.ivory,
+                    child: IndexedStack(
+                      index: _destination.index,
+                      children: [
+                        DashboardPage(
+                          onSeeAllClients: () => _select(AppDestination.clients),
+                        ),
+                        const ClientsPage(),
+                        const HistoryPage(),
+                        const SettingsPage(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -92,7 +126,7 @@ class _Sidebar extends StatelessWidget {
     return ColoredBox(
       color: AppColors.forest,
       child: SizedBox(
-        width: 232,
+        width: AppLayout.sidebarWidth,
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 28, 16, 20),

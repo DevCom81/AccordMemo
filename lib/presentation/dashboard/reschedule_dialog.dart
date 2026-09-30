@@ -117,6 +117,7 @@ class _RescheduleDialogState extends State<_RescheduleDialog> {
       firstName: widget.reminder.firstName,
     );
     return AlertDialog(
+      scrollable: true,
       title: const Text('Reporter le rappel'),
       content: SizedBox(
         width: 420,

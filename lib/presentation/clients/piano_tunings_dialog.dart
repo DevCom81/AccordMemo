@@ -106,11 +106,7 @@ class _PianoTuningsDialogState extends State<PianoTuningsDialog> {
                 title: Text(formatFrenchNumericDate(tuning.tuningDate)),
                 subtitle: notes == null
                     ? null
-                    : Text(
-                        notes,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    : Text(notes),
                 onTap: () => _openCorrection(tuning),
               );
             },

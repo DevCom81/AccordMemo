@@ -6,13 +6,14 @@ import '../../domain/customer/customer.dart';
 import '../../domain/customer/customer_repository.dart';
 import '../history/history_providers.dart';
 import '../theme/app_colors.dart';
+import '../layout/adaptive_layout.dart';
 import 'client_detail_pane.dart';
 import 'clients_providers.dart';
 import 'clients_strings.dart';
 import 'customer_confirm_dialog.dart';
 import 'customer_form_dialog.dart';
 
-const clientsMasterDetailBreakpoint = 960.0;
+const clientsMasterDetailBreakpoint = AppLayout.masterDetailWidth;
 const _listPaneWidth = 340.0;
 
 class ClientsPage extends ConsumerStatefulWidget {
@@ -147,92 +148,94 @@ class _ClientsPageState extends ConsumerState<ClientsPage> {
           );
         }
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(40, 36, 40, 16),
-              child: _ClientsHeader(
-                controller: _searchController,
-                filter: filter,
-                onQueryChanged: (value) {
-                  ref.read(clientsQueryProvider.notifier).schedule(value);
-                },
-                onFilterChanged: (value) {
-                  ref.read(clientsFilterProvider.notifier).setFilter(value);
-                },
-                onCreate: _createCustomer,
+        final header = Padding(
+          padding: const EdgeInsets.fromLTRB(40, 36, 40, 16),
+          child: _ClientsHeader(
+            controller: _searchController,
+            filter: filter,
+            onQueryChanged: (value) {
+              ref.read(clientsQueryProvider.notifier).schedule(value);
+            },
+            onFilterChanged: (value) {
+              ref.read(clientsFilterProvider.notifier).setFilter(value);
+            },
+            onCreate: _createCustomer,
+          ),
+        );
+        final body = Padding(
+          padding: const EdgeInsets.fromLTRB(40, 0, 40, 24),
+          child: async.when(
+            skipLoadingOnReload: true,
+            loading: () => const _ClientsStatus(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(clientsLoadingMessage),
+                ],
               ),
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(40, 0, 40, 24),
-                child: async.when(
-                  skipLoadingOnReload: true,
-                  loading: () => const _ClientsStatus(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text(clientsLoadingMessage),
-                      ],
-                    ),
+            error: (_, _) => _ClientsStatus(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(clientsLoadErrorMessage),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => ref.invalidate(clientsSearchProvider),
+                    child: const Text('Réessayer'),
                   ),
-                  error: (_, _) => _ClientsStatus(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(clientsLoadErrorMessage),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: () => ref.invalidate(clientsSearchProvider),
-                          child: const Text('Réessayer'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  data: (customers) {
-                    if (customers.isEmpty) {
-                      return _EmptyState(
-                        filter: filter,
-                        hasQuery: ref.read(clientsQueryProvider).isNotEmpty,
-                      );
-                    }
-                    final list = _ClientsList(
-                      customers: customers,
-                      selectedId: selectedId,
-                      onSelect: (id) {
-                        ref.read(selectedCustomerIdProvider.notifier).select(id);
-                      },
-                    );
-                    if (!wide) {
-                      return list;
-                    }
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(width: _listPaneWidth, child: list),
-                        const SizedBox(width: 24),
-                        Expanded(
-                          child: selectedCustomer == null
-                              ? const _SelectPrompt()
-                              : ClientDetailPane(
-                                  customer: selectedCustomer,
-                                  onEdit: () => _editCustomer(selectedCustomer),
-                                  onArchive: () =>
-                                      _archiveCustomer(selectedCustomer),
-                                  onRestore: () =>
-                                      _restoreCustomer(selectedCustomer),
-                                ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                ],
               ),
             ),
+            data: (customers) {
+              if (customers.isEmpty) {
+                return _EmptyState(
+                  filter: filter,
+                  hasQuery: ref.read(clientsQueryProvider).isNotEmpty,
+                );
+              }
+              final list = _ClientsList(
+                customers: customers,
+                selectedId: selectedId,
+                onSelect: (id) {
+                  ref.read(selectedCustomerIdProvider.notifier).select(id);
+                },
+              );
+              if (!wide) {
+                return list;
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(width: _listPaneWidth, child: list),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: selectedCustomer == null
+                        ? const _SelectPrompt()
+                        : ClientDetailPane(
+                            customer: selectedCustomer,
+                            onEdit: () => _editCustomer(selectedCustomer),
+                            onArchive: () =>
+                                _archiveCustomer(selectedCustomer),
+                            onRestore: () =>
+                                _restoreCustomer(selectedCustomer),
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+        // Le champ de recherche et les filtres peuvent sortir de l'écran
+        // lorsque le clavier réduit la hauteur, sans écraser la liste.
+        return NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(child: header),
           ],
+          // En mode maître/détail, les deux listes défilent indépendamment.
+          body: wide ? PrimaryScrollController.none(child: body) : body,
         );
       },
     );
@@ -371,14 +374,15 @@ class _FilterToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         _FilterChip(
           label: clientsFilterActive,
           selected: filter == CustomerStatusFilter.active,
           onPressed: () => onChanged(CustomerStatusFilter.active),
         ),
-        const SizedBox(width: 8),
         _FilterChip(
           label: clientsFilterArchived,
           selected: filter == CustomerStatusFilter.archived,
@@ -549,7 +553,7 @@ class _EmptyState extends StatelessWidget {
               ? clientsEmptyArchivedBody
               : clientsEmptyActiveBody);
 
-    return Center(
+    return ScrollableStatus(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Column(
@@ -582,6 +586,6 @@ class _ClientsStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: child);
+    return ScrollableStatus(child: child);
   }
 }

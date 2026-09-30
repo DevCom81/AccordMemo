@@ -70,6 +70,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
+          scrollable: true,
           title: const Text(settingsRestoreTitle),
           content: const SizedBox(
             width: 420,
@@ -333,7 +334,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                         SizedBox(width: 12),
-                        Text(settingsWorking),
+                        Expanded(child: Text(settingsWorking)),
                       ],
                     ),
                   ],

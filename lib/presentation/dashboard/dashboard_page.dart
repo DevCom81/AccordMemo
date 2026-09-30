@@ -11,6 +11,7 @@ import '../app_providers.dart';
 import '../formatters/french_date_label.dart';
 import '../history/history_providers.dart';
 import '../theme/app_colors.dart';
+import '../layout/adaptive_layout.dart';
 import 'dashboard_reminder_card.dart';
 import 'dashboard_strings.dart';
 import 'reschedule_dialog.dart';
@@ -105,11 +106,9 @@ class _DashboardBody extends StatelessWidget {
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(40, 36, 40, 24),
           sliver: SliverToBoxAdapter(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: AdaptiveRow(
               children: [
-                Expanded(
-                  child: Column(
+                Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -122,7 +121,6 @@ class _DashboardBody extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                     ],
-                  ),
                 ),
                 FilledButton(
                   onPressed: onSeeAllClients,
@@ -153,33 +151,26 @@ class _DashboardBody extends StatelessWidget {
                       today: snapshot.today,
                     ),
                   if (snapshot.nextDue != null) const SizedBox(height: 20),
-                  Row(
+                  AdaptiveRow(
+                    flexible: const {0, 1, 2},
                     children: [
-                      Expanded(
-                        child: _KpiCard(
+                      _KpiCard(
                           label: 'En retard',
                           value: '${snapshot.overdue.length}',
                           caption: 'échéance dépassée',
                           emphasized: snapshot.overdue.isNotEmpty,
-                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _KpiCard(
+                      _KpiCard(
                           label: 'À traiter',
                           value: '${snapshot.dueSoon.length}',
                           caption: 'dans les 7 jours',
                           emphasized: false,
-                        ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _KpiCard(
+                      _KpiCard(
                           label: 'À venir',
                           value: '${snapshot.upcoming.length}',
                           caption: 'dans les 30 jours',
                           emphasized: false,
-                        ),
                       ),
                     ],
                   ),
@@ -305,7 +296,7 @@ class _DashboardStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: child);
+    return ScrollableStatus(child: child);
   }
 }
 
@@ -349,12 +340,11 @@ class _NextDueHero extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Row(
+          child: AdaptiveRow(
+            flexible: const {1},
             children: [
               const Icon(Icons.piano, color: AppColors.forest, size: 28),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
+              Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -380,7 +370,6 @@ class _NextDueHero extends StatelessWidget {
                         email: reminder.email,
                       ),
                   ],
-                ),
               ),
               Column(
                 children: [
