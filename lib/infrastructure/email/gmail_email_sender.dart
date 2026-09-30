@@ -7,16 +7,16 @@ import 'package:http/http.dart';
 
 import '../../application/ports/email_sender.dart';
 import '../../application/ports/google_auth_session.dart';
-import '../google/google_apis_auth_session.dart';
+import '../google/google_authorized_session.dart';
 
 final class GmailEmailSender implements EmailSender {
   GmailEmailSender(this._session);
 
-  final GoogleApisAuthSession _session;
+  final GoogleAuthorizedSession _session;
 
   @override
   Future<SentEmailReceipt> send(OutgoingEmail email) async {
-    late final AuthClient client;
+    late final Client client;
     try {
       client = await _session.authorizedClient();
     } on GoogleSessionDisconnected {

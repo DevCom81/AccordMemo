@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../application/ports/google_auth_session.dart';
 import '../../application/ports/secret_store.dart';
 import 'google_oauth_desktop_client.dart';
+import 'google_authorized_session.dart';
 
 const googleMailSendScopes = [
   'https://www.googleapis.com/auth/gmail.send',
@@ -35,7 +36,7 @@ typedef RevokeGoogleToken = Future<void> Function(String token);
 
 typedef OpenAuthorizationUrl = Future<bool> Function(Uri url);
 
-final class GoogleApisAuthSession implements GoogleAuthSession {
+final class GoogleApisAuthSession implements GoogleAuthorizedSession {
   GoogleApisAuthSession({
     required this._desktopClient,
     required this._store,
@@ -138,6 +139,7 @@ final class GoogleApisAuthSession implements GoogleAuthSession {
     await _store.delete(googleAccountEmailStorageKey);
   }
 
+  @override
   Future<String> senderAddress() async {
     final state = await currentState();
     final email = state.accountEmail;
@@ -147,6 +149,7 @@ final class GoogleApisAuthSession implements GoogleAuthSession {
     return email;
   }
 
+  @override
   Future<AuthClient> authorizedClient() async {
     if (!_desktopClient.isConfigured) {
       throw const GoogleOAuthClientNotConfigured();

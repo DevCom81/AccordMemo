@@ -159,6 +159,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted) {
         return;
       }
+      ref.invalidate(googleAuthStateProvider);
       setState(() {
         _busy = false;
         _message = settingsMailMessage(error);
@@ -189,6 +190,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       if (!mounted) {
         return;
       }
+      ref.invalidate(googleAuthStateProvider);
       setState(() {
         _busy = false;
         _message = settingsMailMessage(error);

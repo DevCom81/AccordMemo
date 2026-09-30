@@ -73,6 +73,11 @@ void main() {
         return true;
       },
       obtainConsent: ({required clientId, required scopes, required prompt}) async {
+        expect(scopes, [
+          'https://www.googleapis.com/auth/gmail.send',
+          'openid',
+          'email',
+        ]);
         prompt('https://accounts.google.com/o/oauth2/v2/auth');
         return AccessCredentials(
           AccessToken(

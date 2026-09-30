@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/backup/app_database_session.dart';
@@ -27,6 +29,9 @@ import '../domain/tuning/tuning_repository.dart';
 import '../infrastructure/email/fake_email_sender.dart';
 import '../infrastructure/email/gmail_email_sender.dart';
 import '../infrastructure/google/fake_google_auth_session.dart';
+import '../infrastructure/google/android_google_sign_in.dart';
+import '../infrastructure/google/google_android_auth_session.dart';
+import '../infrastructure/google/google_authorized_session.dart';
 import '../infrastructure/google/google_apis_auth_session.dart';
 import '../infrastructure/google/google_oauth_desktop_client.dart';
 import '../infrastructure/ids/uuid_id_generator.dart';
@@ -186,13 +191,30 @@ final googleApisAuthSessionProvider = Provider<GoogleApisAuthSession>((ref) {
   );
 });
 
+final googleAuthOnAndroidProvider = Provider<bool>((ref) => Platform.isAndroid);
+
+final googleAndroidAuthSessionProvider = Provider<GoogleAndroidAuthSession>((ref) {
+  return GoogleAndroidAuthSession(
+    signIn: NativeAndroidGoogleSignIn(googleAndroidServerClientId),
+    store: ref.watch(secretStoreProvider),
+    serverClientId: googleAndroidServerClientId,
+  );
+});
+
+final googleAuthorizedSessionProvider = Provider<GoogleAuthorizedSession>((ref) {
+  if (ref.watch(googleAuthOnAndroidProvider)) {
+    return ref.watch(googleAndroidAuthSessionProvider);
+  }
+  return ref.watch(googleApisAuthSessionProvider);
+});
+
 final googleAuthSessionProvider = Provider<GoogleAuthSession>((ref) {
   if (ref.watch(demoModeProvider)) {
     return FakeGoogleAuthSession.connected(
       accountEmail: 'demo@pianosoccitanie.fr',
     );
   }
-  return ref.watch(googleApisAuthSessionProvider);
+  return ref.watch(googleAuthorizedSessionProvider);
 });
 
 final googleAuthStateProvider = FutureProvider<GoogleAuthState>((ref) {
@@ -203,7 +225,7 @@ final emailSenderProvider = Provider<EmailSender>((ref) {
   if (ref.watch(demoModeProvider)) {
     return FakeEmailSender();
   }
-  return GmailEmailSender(ref.watch(googleApisAuthSessionProvider));
+  return GmailEmailSender(ref.watch(googleAuthorizedSessionProvider));
 });
 
 final sendReminderProvider = Provider<SendReminder>((ref) {
