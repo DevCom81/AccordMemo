@@ -9,14 +9,16 @@ import '../../infrastructure/files/file_selector_location_picker.dart';
 import '../../infrastructure/persistence/filesystem_backup_store.dart';
 import '../../infrastructure/persistence/sqlite_app_data_locator.dart';
 import '../../infrastructure/persistence/sqlite_backup_validator.dart';
+import '../app_database_holder.dart';
 import '../app_providers.dart';
 import '../dev/demo_mode.dart';
 
 final appDataLocatorProvider = Provider<AppDataLocator>((ref) {
+  final location = ref.watch(sqliteDatabasePathProvider);
   if (ref.watch(demoModeProvider)) {
-    return SqliteAppDataLocator.demo();
+    return SqliteAppDataLocator.demo(location: location);
   }
-  return SqliteAppDataLocator.production();
+  return SqliteAppDataLocator.production(location: location);
 });
 
 final fileLocationPickerProvider = Provider<FileLocationPicker>((ref) {

@@ -13,6 +13,7 @@ import 'infrastructure/persistence/drift_piano_repository.dart';
 import 'infrastructure/persistence/drift_reminder_repository.dart';
 import 'infrastructure/persistence/drift_transaction_runner.dart';
 import 'infrastructure/persistence/drift_tuning_repository.dart';
+import 'infrastructure/persistence/sqlite_database_path.dart';
 import 'infrastructure/time/system_clock.dart';
 import 'main.dart';
 import 'presentation/app_database_holder.dart';
@@ -29,7 +30,8 @@ Future<void> main() async {
     );
   }
 
-  final database = openDemoAppDatabase();
+  final location = await SqliteDatabasePath.forCurrentPlatform();
+  final database = openDemoAppDatabase(location: location);
   try {
     await SeedDemoDashboard(
       clock: const SystemClock(),
@@ -51,7 +53,10 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         demoModeProvider.overrideWith((ref) => true),
-        appDatabaseOpenerProvider.overrideWith((ref) => openDemoAppDatabase),
+        sqliteDatabasePathProvider.overrideWith((ref) => location),
+        appDatabaseOpenerProvider.overrideWith(
+          (ref) => () => openDemoAppDatabase(location: location),
+        ),
         googleAuthSessionProvider.overrideWith(
           (ref) => FakeGoogleAuthSession.connected(
             accountEmail: 'demo@pianosoccitanie.fr',

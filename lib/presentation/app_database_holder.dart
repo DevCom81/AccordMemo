@@ -2,9 +2,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/backup/app_database_session.dart';
 import '../infrastructure/persistence/app_database.dart';
+import '../infrastructure/persistence/sqlite_database_path.dart';
+
+final sqliteDatabasePathProvider = Provider<SqliteDatabasePath>((ref) {
+  return const SqliteDatabasePath();
+});
 
 final appDatabaseOpenerProvider = Provider<AppDatabase Function()>((ref) {
-  return openProductionAppDatabase;
+  final location = ref.watch(sqliteDatabasePathProvider);
+  return () => openProductionAppDatabase(location: location);
 });
 
 final class AppDatabaseHolder extends Notifier<AppDatabase>
