@@ -1,0 +1,8 @@
+# Copier vers android/key.properties (ignore par Git), puis remplir localement.
+# Chemin absolu Linux : ni ~, ni $HOME, ni chemin dans le depot.
+# Ne jamais versionner le fichier rempli ni le keystore.
+# Format Java Properties UTF-8 : doubler les antislashs dans les valeurs.
+storeFile=/CHEMIN/ABSOLU/HORS/DEPOT/accordmemo-release.jks
+storePassword=
+keyAlias=accordmemo
+keyPassword=
