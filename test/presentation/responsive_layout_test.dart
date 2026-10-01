@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:accord_memo/application/backup/app_database_session.dart';
+import 'package:accord_memo/application/backup/backup_validator.dart';
 import 'package:accord_memo/application/dashboard/dashboard_reminder.dart';
 import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
 import 'package:accord_memo/application/history/history_entry.dart';
@@ -135,6 +137,8 @@ Widget _app({Widget home = const AppShell(), bool empty = false,
           FakeAppDataLocator.displayOnly()),
       fileLocationPickerProvider.overrideWith((ref) =>
           FakeFileLocationPicker(openPath: '/fake/backup.db')),
+      backupValidatorProvider.overrideWith((ref) => _DialogBackupValidator()),
+      appDatabaseSessionProvider.overrideWith((ref) => _UnusedDatabaseSession()),
       if (sendReminder != null)
         sendReminderProvider.overrideWith((ref) => sendReminder),
       ...fakeMailOverrides(),
@@ -404,6 +408,8 @@ void main() {
     await tester.tap(find.text(settingsCancel));
     await tester.pumpAndSettle();
     expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text(settingsRestoreCancelled), findsOneWidget);
+    expect(find.text(settingsRestoreError), findsNothing);
   });
 
   for (final loading in [true, false]) {
@@ -451,4 +457,27 @@ Future<SendReminder> _previewService() async {
     googleAuth: FakeGoogleAuthSession.connected(accountEmail: _longEmail),
     emailSender: FakeEmailSender(),
   );
+}
+
+// Ce test vérifie le dialogue ; la validation SQLite est testée séparément.
+final class _DialogBackupValidator implements BackupValidator {
+  @override
+  void validate(String filePath) => expect(filePath, '/fake/backup.db');
+}
+
+final class _UnusedDatabaseSession implements AppDatabaseSession {
+  @override
+  Future<void> exportSnapshot(String destinationPath) async {
+    throw StateError('Une annulation ne doit pas exporter la base');
+  }
+
+  @override
+  Future<void> closeForReplacement() async {
+    throw StateError('Une annulation ne doit pas fermer la base');
+  }
+
+  @override
+  Future<void> openAfterReplacement() async {
+    throw StateError('Une annulation ne doit pas rouvrir la base');
+  }
 }

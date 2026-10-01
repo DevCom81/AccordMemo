@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:accord_memo/application/ports/google_auth_session.dart';
+import 'package:accord_memo/application/ports/email_sender.dart';
+import 'package:accord_memo/infrastructure/email/gmail_email_sender.dart';
 import 'package:accord_memo/infrastructure/google/android_google_sign_in.dart';
 import 'package:accord_memo/infrastructure/google/google_android_auth_session.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -43,6 +45,9 @@ final class _SignIn implements AndroidGoogleSignIn {
   int authenticateCalls = 0;
   Object? authenticateError;
   Object? signOutError;
+  Object? restoreError;
+  bool restorable = true;
+  Future<AndroidGoogleAccount?> Function()? restoreAccount;
   Completer<AndroidGoogleAccount?>? restoration;
 
   @override
@@ -62,6 +67,10 @@ final class _SignIn implements AndroidGoogleSignIn {
   @override
   Future<AndroidGoogleAccount?> restore() async {
     restoreCalls++;
+    expect(initializationCalls, greaterThan(0));
+    if (restoreError != null) throw restoreError!;
+    if (!restorable) return null;
+    if (restoreAccount != null) return restoreAccount!();
     return restoration == null ? account : await restoration!.future;
   }
 
@@ -139,11 +148,14 @@ void main() {
     await session.disconnect();
     expect(store.values, isEmpty);
     expect((await session.currentState()).isConnected, isFalse);
+    final restartedNative = _SignIn();
     final restarted = GoogleAndroidAuthSession(
-      signIn: native, store: store, serverClientId: 'test-only-web-client',
+      signIn: restartedNative, store: store, serverClientId: 'test-only-web-client',
     );
     expect((await restarted.currentState()).isConnected, isFalse);
     expect(native.restoreCalls, 0);
+    expect(restartedNative.restoreCalls, 0);
+    expect(restartedNative.initializationCalls, 0);
     expect(native.signOutCalls, 2);
     expect((await restarted.connect()).isConnected, isTrue);
   });
@@ -257,5 +269,104 @@ void main() {
     }
     expect(requests, 1);
     expect(native.account.cleared, ['test-access-token']);
+  });
+
+  test('deux sessions : connexion, Gmail, redémarrage et Gmail sans interaction', () async {
+    final headers = <String?>[];
+    http.Client transport() => MockClient((request) async {
+      expect(request.method, 'POST');
+      expect(request.url.host, 'gmail.googleapis.com');
+      headers.add(request.headers['Authorization']);
+      return http.Response('{"id":"sent-message"}', 200,
+          headers: {'content-type': 'application/json; charset=utf-8'});
+    });
+    const email = OutgoingEmail(
+      to: 'recipient@example.com', subject: 'Rappel', body: 'Message de test',
+    );
+    final first = GoogleAndroidAuthSession(
+      signIn: native, store: store, serverClientId: 'test-only-web-client',
+      clientFactory: transport,
+    );
+    await first.connect();
+    expect((await GmailEmailSender(first).send(email)).providerMessageId,
+        'sent-message');
+    expect(store.values, {googleAndroidAccountStorageKey: 'test-account'});
+
+    // Ni l'objet session ni l'adaptateur natif ne survivent au redémarrage.
+    final secondNative = _SignIn();
+    var silentAuthorizations = 0;
+    secondNative.restoreAccount = () => restoreGoogleAuthorization(
+      authorize: (scopes) async {
+        expect(scopes, googleAndroidScopes);
+        silentAuthorizations++;
+        return 'new-sdk-token';
+      },
+      clearToken: (_) async {},
+      clientFactory: () => MockClient((request) async {
+        expect(request.url.path, '/oauth2/v3/userinfo');
+        expect(request.headers['Authorization'], 'Bearer new-sdk-token');
+        return http.Response(
+          '{"sub":"test-account","email":"accord@example.com","email_verified":true}',
+          200,
+        );
+      }),
+    );
+    final second = GoogleAndroidAuthSession(
+      signIn: secondNative, store: store, serverClientId: 'test-only-web-client',
+      clientFactory: transport,
+    );
+    // Envoi direct, sans visite de Paramètres ni appel à connect/currentState.
+    expect((await GmailEmailSender(second).send(email)).providerMessageId,
+        'sent-message');
+    expect((await second.currentState()).accountEmail, 'accord@example.com');
+    expect(headers, ['Bearer test-access-token', 'Bearer new-sdk-token']);
+    expect(secondNative.restoreCalls, 1);
+    expect(secondNative.authenticateCalls, 0);
+    expect(secondNative.signOutCalls, 0);
+    expect(silentAuthorizations, greaterThan(0));
+    expect(secondNative.account.requests, isEmpty);
+    expect(store.values, {googleAndroidAccountStorageKey: 'test-account'});
+  });
+
+  test('nouvelle session : restauration impossible puis connexion explicite', () async {
+    await session.connect();
+    final secondNative = _SignIn()..restorable = false;
+    final second = GoogleAndroidAuthSession(
+      signIn: secondNative, store: store, serverClientId: 'test-only-web-client',
+    );
+    expect((await second.currentState()).isConnected, isFalse);
+    expect(secondNative.authenticateCalls, 0);
+    expect(store.values, {googleAndroidAccountStorageKey: 'test-account'});
+    expect((await second.connect()).isConnected, isTrue);
+    expect(secondNative.authenticateCalls, 1);
+  });
+
+  test('nouvelle session : erreur temporaire propagée sans effacement et nouvelle tentative', () async {
+    await session.connect();
+    final secondNative = _SignIn()..restoreError = StateError('réseau indisponible');
+    final second = GoogleAndroidAuthSession(
+      signIn: secondNative, store: store, serverClientId: 'test-only-web-client',
+    );
+    await expectLater(
+      second.currentState(),
+      throwsA(isA<GoogleAuthorizationFailed>()),
+    );
+    expect(store.values, {googleAndroidAccountStorageKey: 'test-account'});
+    secondNative.restoreError = null;
+    expect((await second.currentState()).isConnected, isTrue);
+    expect(secondNative.restoreCalls, 2);
+    expect(secondNative.authenticateCalls, 0);
+  });
+
+  test('restauration vide temporaire : ne verrouille pas toute la session', () async {
+    await session.connect();
+    final secondNative = _SignIn()..restorable = false;
+    final second = GoogleAndroidAuthSession(
+      signIn: secondNative, store: store, serverClientId: 'test-only-web-client',
+    );
+    expect((await second.currentState()).isConnected, isFalse);
+    secondNative.restorable = true;
+    expect((await second.currentState()).isConnected, isTrue);
+    expect(secondNative.authenticateCalls, 0);
   });
 }

@@ -21,6 +21,7 @@ class SettingsPage extends ConsumerStatefulWidget {
 
 class _SettingsPageState extends ConsumerState<SettingsPage> {
   var _busy = false;
+  var _confirmingRestore = false;
   String? _message;
   var _isError = false;
 
@@ -40,10 +41,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
       setState(() {
         _busy = false;
-        if (outcome == BackupOutcome.completed) {
-          _message = settingsBackupSuccess;
-          _isError = false;
-        }
+        _message = outcome == BackupOutcome.completed
+            ? settingsBackupSuccess
+            : settingsBackupCancelled;
+        _isError = false;
       });
     } catch (error) {
       if (!mounted) {
@@ -57,15 +58,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     }
   }
 
-  Future<void> _restore() async {
-    if (_busy) {
-      return;
+  Future<bool> _confirmRestore() async {
+    if (!mounted) {
+      return false;
     }
-    final picker = ref.read(fileLocationPickerProvider);
-    final source = await picker.pickOpenLocation();
-    if (!mounted || source == null) {
-      return;
-    }
+    setState(() => _confirmingRestore = true);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -93,7 +90,15 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         );
       },
     );
-    if (!mounted || confirmed != true) {
+    if (!mounted) {
+      return false;
+    }
+    setState(() => _confirmingRestore = false);
+    return confirmed == true;
+  }
+
+  Future<void> _restore() async {
+    if (_busy) {
       return;
     }
     setState(() {
@@ -103,7 +108,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     });
     try {
       final outcome = await ref.read(dataBackupServiceProvider).restore(
-        sourcePath: source,
+        confirm: _confirmRestore,
       );
       if (!mounted) {
         return;
@@ -113,10 +118,10 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
       setState(() {
         _busy = false;
-        if (outcome == RestoreOutcome.completed) {
-          _message = settingsRestoreSuccess;
-          _isError = false;
-        }
+        _message = outcome == RestoreOutcome.completed
+            ? settingsRestoreSuccess
+            : settingsRestoreCancelled;
+        _isError = false;
       });
     } catch (error) {
       if (!mounted) {
@@ -127,6 +132,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       }
       setState(() {
         _busy = false;
+        _confirmingRestore = false;
         _message = settingsRestoreMessage(error);
         _isError = true;
       });
@@ -211,8 +217,13 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final location = ref.watch(appDataLocatorProvider).displayLocation;
+    final android = ref.watch(backupOnAndroidProvider);
+    final location = android
+        ? settingsAndroidLocation
+        : ref.watch(appDataLocatorProvider).displayLocation;
     final google = ref.watch(googleAuthStateProvider);
+    final restoringGoogle = ref.watch(googleAuthOnAndroidProvider) &&
+        google.isLoading;
     final googleState =
         google.asData?.value ?? const GoogleAuthState.disconnected();
     return CustomScrollView(
@@ -236,7 +247,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    settingsLocalOnlyMessage,
+                    android
+                        ? settingsLocalOnlyAndroidMessage
+                        : settingsLocalOnlyMessage,
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                   const SizedBox(height: 20),
@@ -250,7 +263,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    settingsBackupHelp,
+                    android ? settingsAndroidBackupHelp : settingsBackupHelp,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: AppColors.muted,
                     ),
@@ -287,7 +300,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 12),
-                  if (googleState.isConnected) ...[
+                  if (restoringGoogle)
+                    const Text(settingsMailRestoring)
+                  else if (googleState.isConnected) ...[
                     Text(
                       '$settingsMailConnectedPrefix${googleState.accountEmail}',
                       style: Theme.of(context).textTheme.titleMedium,
@@ -324,7 +339,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                       child: const Text(settingsMailConnect),
                     ),
-                  if (_busy) ...[
+                  if (_busy && !_confirmingRestore) ...[
                     const SizedBox(height: 16),
                     const Row(
                       children: [

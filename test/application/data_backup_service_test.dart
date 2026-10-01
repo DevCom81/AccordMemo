@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:accord_memo/application/backup/app_database_session.dart';
 import 'package:accord_memo/application/backup/backup_exceptions.dart';
+import 'package:accord_memo/application/backup/backup_file_access.dart';
 import 'package:accord_memo/application/backup/backup_outcome.dart';
 import 'package:accord_memo/application/backup/backup_store.dart';
 import 'package:accord_memo/application/backup/backup_validator.dart';
@@ -261,6 +262,205 @@ void main() {
     hanging.export.completeError(const BackupFileInvalid());
     await expectLater(first, throwsA(isA<BackupFileInvalid>()));
   });
+
+  test('document : export SQLite valide avant publication et nettoyage', () async {
+    final directory = await tempDir();
+    final live = File(p.join(directory.path, 'live.db'));
+    final document = File(p.join(directory.path, 'document.db'));
+    final selection = _TestSelection(
+      File(p.join(directory.path, 'stage.db')),
+      destination: document,
+    );
+    final access = _TestFileAccess(save: selection);
+    final container = _container(live: live);
+    await _seedLiveWorld(container.read(appDatabaseProvider));
+    final before = container.read(appDatabaseProvider);
+    final service = _service(container: container, live: live, fileAccess: access);
+
+    expect(await service.backup(), BackupOutcome.completed);
+    expect(access.suggestedName, 'AccordMemo_backup_2026-09-18_14-30.db');
+    expect(selection.events, ['commit', 'dispose']);
+    expect(selection.file.existsSync(), isFalse);
+    expect(() => _validator.validate(document.path), returnsNormally);
+    expect(_lastNamesFromSqliteFile(document), ['Dupont']);
+    expect(identical(before, container.read(appDatabaseProvider)), isTrue);
+    expect(await _lastNames(before), ['Dupont']);
+  });
+
+  test('document : annuler les sélecteurs ne touche pas la base', () async {
+    final directory = await tempDir();
+    final live = File(p.join(directory.path, 'live.db'));
+    final container = _container(live: live);
+    await _insertCustomer(container.read(appDatabaseProvider));
+    final session = _RecordingSession(container.read(appDatabaseSessionProvider));
+    final service = _service(
+      container: container, live: live,
+      fileAccess: _TestFileAccess(), session: session,
+    );
+    expect(await service.backup(), BackupOutcome.cancelled);
+    expect(await service.restore(confirm: () async => fail('confirmation')),
+        RestoreOutcome.cancelled);
+    expect(session.events, isEmpty);
+    expect(await _lastNames(container.read(appDatabaseProvider)), ['Dupont']);
+  });
+
+  test('document : erreur écriture, nettoyage et données intactes', () async {
+    final directory = await tempDir();
+    final live = File(p.join(directory.path, 'live.db'));
+    final container = _container(live: live);
+    await _insertCustomer(container.read(appDatabaseProvider));
+    final selection = _TestSelection(
+      File(p.join(directory.path, 'stage.db')), failCommit: true,
+    );
+    final service = _service(
+      container: container, live: live,
+      fileAccess: _TestFileAccess(save: selection),
+    );
+    await expectLater(service.backup(), throwsA(isA<FileSystemException>()));
+    expect(selection.events, ['commit', 'dispose']);
+    expect(selection.file.existsSync(), isFalse);
+    expect(await _lastNames(container.read(appDatabaseProvider)), ['Dupont']);
+    // Le verrou est libéré après l'erreur.
+    expect(await service.restore(), RestoreOutcome.cancelled);
+  });
+
+  for (final kind in ['invalide', 'incompatible', 'tables absentes']) {
+    test('document $kind refusé avant confirmation et fermeture', () async {
+      final directory = await tempDir();
+      final live = File(p.join(directory.path, 'live.db'));
+      final source = File(p.join(directory.path, 'stage.db'));
+      if (kind == 'incompatible') {
+        await _writeMigratedDatabase(source, userVersion: 7);
+      } else if (kind == 'tables absentes') {
+        final raw = sqlite3.open(source.path);
+        raw.execute('PRAGMA user_version = 6');
+        raw.close();
+      } else {
+        await source.writeAsString('pas une base SQLite');
+      }
+      final container = _container(live: live);
+      await _insertCustomer(container.read(appDatabaseProvider));
+      final before = container.read(appDatabaseProvider);
+      final session = _RecordingSession(container.read(appDatabaseSessionProvider));
+      final selection = _TestSelection(source);
+      final service = _service(
+        container: container, live: live, session: session,
+        fileAccess: _TestFileAccess(open: selection),
+      );
+      await expectLater(
+        service.restore(confirm: () async => fail('confirmation prématurée')),
+        throwsA(kind == 'incompatible'
+            ? isA<BackupFromNewerApp>() : isA<BackupFileInvalid>()),
+      );
+      expect(session.events, isEmpty);
+      expect(selection.events, ['dispose']);
+      expect(source.existsSync(), isFalse);
+      expect(identical(before, container.read(appDatabaseProvider)), isTrue);
+      expect(await _lastNames(before), ['Dupont']);
+    });
+  }
+
+  test('document : refuser la confirmation nettoie sans fermer la base', () async {
+    final directory = await tempDir();
+    final live = File(p.join(directory.path, 'live.db'));
+    final source = File(p.join(directory.path, 'stage.db'));
+    await _writeMigratedDatabase(source);
+    final container = _container(live: live);
+    await _insertCustomer(container.read(appDatabaseProvider));
+    final selection = _TestSelection(source);
+    final session = _RecordingSession(container.read(appDatabaseSessionProvider));
+    final service = _service(
+      container: container, live: live, session: session,
+      fileAccess: _TestFileAccess(open: selection),
+    );
+    var confirmations = 0;
+    expect(await service.restore(confirm: () async {
+      confirmations++;
+      expect(source.existsSync(), isTrue);
+      expect(session.events, isEmpty);
+      return false;
+    }), RestoreOutcome.cancelled);
+    expect(confirmations, 1);
+    expect(session.events, isEmpty);
+    expect(selection.events, ['dispose']);
+    expect(source.existsSync(), isFalse);
+    expect(await _lastNames(container.read(appDatabaseProvider)), ['Dupont']);
+  });
+
+  for (final fromAndroid in [false, true]) {
+    test('format partagé : ${fromAndroid ? 'Android vers Windows' : 'Windows vers Android'}', () async {
+      final directory = await tempDir();
+      final origin = File(p.join(directory.path, 'origin.db'));
+      final target = File(p.join(directory.path, 'target.db'));
+      final document = File(p.join(directory.path, 'document.db'));
+      final stage = File(p.join(directory.path, 'stage.db'));
+      final originContainer = _container(live: origin);
+      final targetContainer = _container(live: target);
+      await _seedLiveWorld(originContainer.read(appDatabaseProvider));
+      await _insertCustomer(targetContainer.read(appDatabaseProvider), lastName: 'Martin');
+      final exporter = _service(
+        container: originContainer, live: origin,
+        picker: FakeFileLocationPicker(savePath: document.path),
+        fileAccess: fromAndroid
+            ? _TestFileAccess(save: _TestSelection(stage, destination: document))
+            : null,
+      );
+      expect(await exporter.backup(), BackupOutcome.completed);
+      if (!fromAndroid) await document.copy(stage.path);
+      final session = _RecordingSession(targetContainer.read(appDatabaseSessionProvider));
+      final store = _RecordingStore(session);
+      final importer = _service(
+        container: targetContainer, live: target, session: session,
+        backupStore: store,
+        picker: FakeFileLocationPicker(openPath: document.path),
+        fileAccess: fromAndroid ? null : _TestFileAccess(open: _TestSelection(stage)),
+      );
+      final before = targetContainer.read(appDatabaseProvider);
+      expect(await importer.restore(confirm: () async {
+        session.events.add('confirm');
+        return true;
+      }), RestoreOutcome.completed);
+      expect(session.events, ['confirm', 'snapshot', 'close', 'delete', 'replace', 'open']);
+      expect(identical(before, targetContainer.read(appDatabaseProvider)), isFalse);
+      expect(await _lastNames(targetContainer.read(appDatabaseProvider)), ['Dupont']);
+      final dashboard = await targetContainer.read(dashboardSnapshotProvider.future);
+      expect(dashboard.dueSoon.single.lastName, 'Dupont');
+      expect(await targetContainer.read(historySnapshotProvider.future), hasLength(1));
+      // Les données persistent après une autre fermeture/réouverture réelle.
+      await session.closeForReplacement();
+      await session.openAfterReplacement();
+      expect(await _lastNames(targetContainer.read(appDatabaseProvider)), ['Dupont']);
+      expect(document.existsSync(), isTrue);
+      expect(stage.existsSync(), isFalse);
+    });
+  }
+
+  test('document : échec réouverture, rollback puis nettoyage de la sélection', () async {
+    final directory = await tempDir();
+    final live = File(p.join(directory.path, 'live.db'));
+    final source = File(p.join(directory.path, 'stage.db'));
+    await _writeMigratedDatabase(source);
+    final container = _container(live: live);
+    await _insertCustomer(container.read(appDatabaseProvider));
+    final session = _RecordingSession(
+      container.read(appDatabaseSessionProvider), failFirstOpen: true,
+    );
+    final selection = _TestSelection(source);
+    final service = _service(
+      container: container, live: live, session: session,
+      backupStore: _RecordingStore(session),
+      fileAccess: _TestFileAccess(open: selection),
+    );
+    await expectLater(service.restore(confirm: () async => true),
+        throwsA(isA<RestoreRolledBack>()));
+    expect(session.events, [
+      'snapshot', 'close', 'delete', 'replace', 'open',
+      'delete', 'replace', 'open',
+    ]);
+    expect(await _lastNames(container.read(appDatabaseProvider)), ['Dupont']);
+    expect(selection.events, ['dispose']);
+    expect(source.existsSync(), isFalse);
+  });
 }
 
 ProviderContainer _container({required File live}) {
@@ -288,6 +488,8 @@ DataBackupService _service({
   FakeFileLocationPicker? picker,
   BackupValidator? backupValidator,
   BackupStore? backupStore,
+  BackupFileAccess? fileAccess,
+  AppDatabaseSession? session,
 }) {
   return DataBackupService(
     clock: _clock,
@@ -296,7 +498,8 @@ DataBackupService _service({
     picker: picker ?? FakeFileLocationPicker(),
     validator: backupValidator ?? _validator,
     store: backupStore ?? _store,
-    session: container.read(appDatabaseSessionProvider),
+    session: session ?? container.read(appDatabaseSessionProvider),
+    fileAccess: fileAccess,
   );
 }
 
@@ -458,4 +661,114 @@ final class _HangingSession implements AppDatabaseSession {
 
   @override
   Future<void> openAfterReplacement() async {}
+}
+
+final class _TestFileAccess implements BackupFileAccess {
+  _TestFileAccess({this.save, this.open});
+
+  final BackupFileSelection? save;
+  final BackupFileSelection? open;
+  String? suggestedName;
+
+  @override
+  Future<BackupFileSelection?> selectSave({required String suggestedFileName}) async {
+    suggestedName = suggestedFileName;
+    return save;
+  }
+
+  @override
+  Future<BackupFileSelection?> selectOpen() async => open;
+}
+
+final class _TestSelection implements BackupFileSelection {
+  _TestSelection(this.file, {this.destination, this.failCommit = false});
+
+  final File file;
+  final File? destination;
+  final bool failCommit;
+  final events = <String>[];
+
+  @override
+  String get localPath => file.path;
+
+  @override
+  Future<void> commit() async {
+    events.add('commit');
+    // Vérifie le véritable fichier remis au transport, pas une fixture SQLite.
+    _validator.validate(file.path);
+    if (failCommit) throw const FileSystemException('écriture refusée');
+    await file.copy(destination!.path);
+  }
+
+  @override
+  Future<void> dispose() async {
+    events.add('dispose');
+    if (file.existsSync()) await file.delete();
+  }
+}
+
+final class _RecordingSession implements AppDatabaseSession {
+  _RecordingSession(this._inner, {this.failFirstOpen = false});
+
+  final AppDatabaseSession _inner;
+  final bool failFirstOpen;
+  final events = <String>[];
+  var closed = false;
+  var opens = 0;
+
+  @override
+  Future<void> exportSnapshot(String destinationPath) async {
+    events.add('snapshot');
+    expect(closed, isFalse);
+    await _inner.exportSnapshot(destinationPath);
+  }
+
+  @override
+  Future<void> closeForReplacement() async {
+    await _inner.closeForReplacement();
+    closed = true;
+    events.add('close');
+  }
+
+  @override
+  Future<void> openAfterReplacement() async {
+    events.add('open');
+    expect(closed, isTrue);
+    opens++;
+    if (failFirstOpen && opens == 1) throw StateError('ouverture impossible');
+    await _inner.openAfterReplacement();
+    closed = false;
+  }
+}
+
+final class _RecordingStore implements BackupStore {
+  _RecordingStore(this.session);
+
+  final _RecordingSession session;
+
+  @override
+  Future<void> deleteDatabaseFiles(String databasePath) {
+    expect(session.closed, isTrue);
+    session.events.add('delete');
+    return _store.deleteDatabaseFiles(databasePath);
+  }
+
+  @override
+  Future<void> materializeBackup({
+    required String sourcePath,
+    required String liveDatabasePath,
+  }) {
+    expect(session.closed, isTrue);
+    session.events.add('replace');
+    return _store.materializeBackup(
+      sourcePath: sourcePath, liveDatabasePath: liveDatabasePath,
+    );
+  }
+
+  @override
+  Future<void> replaceAtomically({required String fromTemp, required String destination}) =>
+      _store.replaceAtomically(fromTemp: fromTemp, destination: destination);
+
+  @override
+  Future<void> deleteFileIfExists(String path) => _store.deleteFileIfExists(path);
 }

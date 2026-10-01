@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/backup/app_data_locator.dart';
+import '../../application/backup/backup_file_access.dart';
 import '../../application/backup/backup_store.dart';
 import '../../application/backup/backup_validator.dart';
 import '../../application/backup/data_backup_service.dart';
 import '../../application/backup/file_location_picker.dart';
+import '../../infrastructure/files/android_backup_file_access.dart';
 import '../../infrastructure/files/file_selector_location_picker.dart';
 import '../../infrastructure/persistence/filesystem_backup_store.dart';
 import '../../infrastructure/persistence/sqlite_app_data_locator.dart';
@@ -25,6 +29,14 @@ final fileLocationPickerProvider = Provider<FileLocationPicker>((ref) {
   return const FileSelectorLocationPicker();
 });
 
+final backupOnAndroidProvider = Provider<bool>((ref) => Platform.isAndroid);
+
+final backupFileAccessProvider = Provider<BackupFileAccess?>((ref) {
+  return ref.watch(backupOnAndroidProvider)
+      ? const AndroidBackupFileAccess()
+      : null;
+});
+
 final backupValidatorProvider = Provider<BackupValidator>((ref) {
   return const SqliteBackupValidator();
 });
@@ -42,5 +54,6 @@ final dataBackupServiceProvider = Provider<DataBackupService>((ref) {
     validator: ref.watch(backupValidatorProvider),
     store: ref.watch(backupStoreProvider),
     session: ref.watch(appDatabaseSessionProvider),
+    fileAccess: ref.watch(backupFileAccessProvider),
   );
 });

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:accord_memo/application/backup/app_database_session.dart';
+import 'package:accord_memo/application/backup/backup_file_access.dart';
 import 'package:accord_memo/application/backup/backup_outcome.dart';
 import 'package:accord_memo/application/backup/file_location_picker.dart';
 import 'package:accord_memo/application/dashboard/dashboard_snapshot.dart';
@@ -118,6 +119,63 @@ void main() {
     await tester.pumpAndSettle();
     expect(google.disconnectCalls, 1);
     expect(find.text(settingsMailConnect), findsOneWidget);
+  });
+
+  testWidgets('Android : emplacement privé sans chemin technique', (tester) async {
+    await prepareDesktop(tester);
+    await tester.pumpWidget(_idleSettingsApp(
+      picker: FakeFileLocationPicker(), android: true,
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paramètres'));
+    await tester.pumpAndSettle();
+    expect(find.text(settingsLocalOnlyAndroidMessage), findsOneWidget);
+    expect(find.text(settingsAndroidLocation), findsOneWidget);
+    expect(find.text(settingsAndroidBackupHelp), findsOneWidget);
+    expect(find.text(r'C:\Users\Eleonore\AppData\Roaming\AccordMemo'), findsNothing);
+  });
+
+  testWidgets('Android : messages d’annulation des deux sélecteurs', (tester) async {
+    await prepareDesktop(tester);
+    await tester.pumpWidget(_idleSettingsApp(
+      picker: FakeFileLocationPicker(), android: true,
+      fileAccess: _DocumentAccess(),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paramètres'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(settingsBackupButton));
+    await tester.pumpAndSettle();
+    expect(find.text(settingsBackupCancelled), findsOneWidget);
+    expect(find.text(settingsBackupError), findsNothing);
+    await tester.tap(find.text(settingsRestoreButton));
+    await tester.pumpAndSettle();
+    expect(find.text(settingsRestoreCancelled), findsOneWidget);
+    expect(find.text(settingsRestoreTitle), findsNothing);
+    expect(find.text(settingsRestoreError), findsNothing);
+  });
+
+  testWidgets('Android : erreur du sélecteur traitée et boutons réactivés', (tester) async {
+    await prepareDesktop(tester);
+    await tester.pumpWidget(_idleSettingsApp(
+      picker: FakeFileLocationPicker(), android: true,
+      fileAccess: _DocumentAccess(failSelection: true),
+    ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Paramètres'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(settingsRestoreButton));
+    await tester.pumpAndSettle();
+    expect(find.text(settingsRestoreError), findsOneWidget);
+    expect(find.text(settingsRestoreTitle), findsNothing);
+    expect(tester.takeException(), isNull);
+    expect(tester.widget<OutlinedButton>(
+      find.widgetWithText(OutlinedButton, settingsRestoreButton),
+    ).onPressed, isNotNull);
+    await tester.tap(find.text(settingsBackupButton));
+    await tester.pumpAndSettle();
+    expect(find.text(settingsBackupError), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('annuler Enregistrer sous ne change rien et n’affiche pas d’erreur', (
@@ -350,7 +408,11 @@ void main() {
   });
 }
 
-Widget _idleSettingsApp({required FileLocationPicker picker}) {
+Widget _idleSettingsApp({
+  required FileLocationPicker picker,
+  bool android = false,
+  BackupFileAccess? fileAccess,
+}) {
   return ProviderScope(
     overrides: [
       dashboardSnapshotProvider.overrideWith((ref) async => _emptyDashboard),
@@ -362,6 +424,9 @@ Widget _idleSettingsApp({required FileLocationPicker picker}) {
         (ref) => FakeAppDataLocator.displayOnly(),
       ),
       fileLocationPickerProvider.overrideWith((ref) => picker),
+      backupOnAndroidProvider.overrideWith((ref) => android),
+      if (fileAccess != null)
+        backupFileAccessProvider.overrideWith((ref) => fileAccess),
       clockProvider.overrideWith((ref) => _clock),
       appDatabaseSessionProvider.overrideWith((ref) => const _IdleSession()),
       ...fakeMailOverrides(),
@@ -384,6 +449,22 @@ final class _IdleSession implements AppDatabaseSession {
 
   @override
   Future<void> openAfterReplacement() async {}
+}
+
+final class _DocumentAccess implements BackupFileAccess {
+  _DocumentAccess({this.failSelection = false});
+
+  final bool failSelection;
+
+  @override
+  Future<BackupFileSelection?> selectOpen() async {
+    if (failSelection) throw StateError('sélecteur indisponible');
+    return null;
+  }
+
+  @override
+  Future<BackupFileSelection?> selectSave({required String suggestedFileName}) =>
+      selectOpen();
 }
 
 Widget _displaySettingsApp() {

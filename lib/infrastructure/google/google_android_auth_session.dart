@@ -6,11 +6,8 @@ import '../../application/ports/secret_store.dart';
 import 'android_google_sign_in.dart';
 import 'google_authorized_session.dart';
 
-const googleAndroidScopes = [
-  'openid',
-  'https://www.googleapis.com/auth/userinfo.email',
-  'https://www.googleapis.com/auth/gmail.send',
-];
+export 'android_google_sign_in.dart' show googleAndroidScopes;
+
 const googleAndroidAccountStorageKey = 'accord_memo.google.android.account_id';
 const googleAndroidServerClientId = String.fromEnvironment(
   'ACCORD_MEMO_GOOGLE_ANDROID_SERVER_CLIENT_ID',
@@ -29,7 +26,7 @@ final class GoogleAndroidAuthSession implements GoogleAuthorizedSession {
   final String _serverClientId;
   final http.Client Function() _clientFactory;
   AndroidGoogleAccount? _account;
-  bool _restoreAttempted = false;
+  bool _explicitlyDisconnected = false;
   Future<void> _pending = Future<void>.value();
 
   // Sérialise restauration, connexion et logout pour empêcher une restauration
@@ -64,7 +61,7 @@ final class GoogleAndroidAuthSession implements GoogleAuthorizedSession {
   }
 
   Future<AndroidGoogleAccount?> _restore() async {
-    if (_account != null || _restoreAttempted) {
+    if (_account != null || _explicitlyDisconnected) {
       return _account;
     }
     final savedId = await _store.read(googleAndroidAccountStorageKey);
@@ -73,7 +70,6 @@ final class GoogleAndroidAuthSession implements GoogleAuthorizedSession {
     }
     await _initialize();
     final restored = await _signIn.restore();
-    _restoreAttempted = true;
     if (restored != null && restored.id == savedId) {
       _account = restored;
     }
@@ -117,6 +113,7 @@ final class GoogleAndroidAuthSession implements GoogleAuthorizedSession {
     // n'est confié au stockage applicatif ; Google gère son renouvellement.
     await _store.write(googleAndroidAccountStorageKey, account.id);
     _account = account;
+    _explicitlyDisconnected = false;
     return GoogleAuthState.connected(account.email);
   }
 
@@ -128,7 +125,7 @@ final class GoogleAndroidAuthSession implements GoogleAuthorizedSession {
 
   Future<void> _disconnect() async {
     _account = null;
-    _restoreAttempted = true;
+    _explicitlyDisconnected = true;
     await _store.delete(googleAndroidAccountStorageKey);
     if (_serverClientId.trim().isNotEmpty) {
       await _initialize();

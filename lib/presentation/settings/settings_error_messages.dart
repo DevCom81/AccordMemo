@@ -29,8 +29,8 @@ String settingsRestoreMessage(Object error) {
   if (error is BackupBusy) {
     return settingsBackupBusy;
   }
-  if (error is RestoreRolledBack || error is RestoreFailed) {
-    return settingsRestoreError;
+  if (error is RestoreFailed) {
+    return settingsRestoreRecoveryError;
   }
   return settingsRestoreError;
 }

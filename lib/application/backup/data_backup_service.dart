@@ -5,6 +5,7 @@ import '../ports/id_generator.dart';
 import 'app_data_locator.dart';
 import 'app_database_session.dart';
 import 'backup_exceptions.dart';
+import 'backup_file_access.dart';
 import 'backup_file_name.dart';
 import 'backup_outcome.dart';
 import 'backup_store.dart';
@@ -20,6 +21,7 @@ final class DataBackupService {
     required this._validator,
     required this._store,
     required this._session,
+    this._fileAccess,
   });
 
   final Clock _clock;
@@ -29,6 +31,7 @@ final class DataBackupService {
   final BackupValidator _validator;
   final BackupStore _store;
   final AppDatabaseSession _session;
+  final BackupFileAccess? _fileAccess;
   var _busy = false;
 
   String get displayLocation => _locator.displayLocation;
@@ -37,33 +40,71 @@ final class DataBackupService {
     if (_busy) {
       throw const BackupBusy();
     }
-    final destination =
-        destinationPath ??
-        await _picker.pickSaveLocation(
-          suggestedFileName: suggestedBackupFileName(_clock.now()),
-        );
-    if (destination == null) {
-      return BackupOutcome.cancelled;
-    }
     _busy = true;
+    BackupFileSelection? selection;
     try {
+      final name = suggestedBackupFileName(_clock.now());
+      if (destinationPath == null && _fileAccess != null) {
+        selection = await _fileAccess.selectSave(suggestedFileName: name);
+        if (selection == null) {
+          return BackupOutcome.cancelled;
+        }
+      }
+      final destination = destinationPath ??
+          selection?.localPath ??
+          await _picker.pickSaveLocation(suggestedFileName: name);
+      if (destination == null) {
+        return BackupOutcome.cancelled;
+      }
       await _exportAtomically(destination);
+      await selection?.commit();
       return BackupOutcome.completed;
     } finally {
-      _busy = false;
+      try {
+        await selection?.dispose();
+      } finally {
+        _busy = false;
+      }
     }
   }
 
-  Future<RestoreOutcome> restore({String? sourcePath}) async {
+  Future<RestoreOutcome> restore({
+    String? sourcePath,
+    Future<bool> Function()? confirm,
+  }) async {
     if (_busy) {
       throw const BackupBusy();
     }
-    final source = sourcePath ?? await _picker.pickOpenLocation();
-    if (source == null) {
-      return RestoreOutcome.cancelled;
-    }
-    _validator.validate(source);
     _busy = true;
+    BackupFileSelection? selection;
+    try {
+      if (sourcePath == null && _fileAccess != null) {
+        selection = await _fileAccess.selectOpen();
+        if (selection == null) {
+          return RestoreOutcome.cancelled;
+        }
+      }
+      final source = sourcePath ??
+          selection?.localPath ??
+          await _picker.pickOpenLocation();
+      if (source == null) {
+        return RestoreOutcome.cancelled;
+      }
+      _validator.validate(source);
+      if (confirm != null && !await confirm()) {
+        return RestoreOutcome.cancelled;
+      }
+      return await _restoreValidated(source);
+    } finally {
+      try {
+        await selection?.dispose();
+      } finally {
+        _busy = false;
+      }
+    }
+  }
+
+  Future<RestoreOutcome> _restoreValidated(String source) async {
     final safetyPath = p.join(
       _locator.liveDirectoryPath,
       'accord_memo.safety-${_idGenerator.next()}.db',
@@ -94,7 +135,6 @@ final class DataBackupService {
       if (!keepSafety) {
         await _store.deleteFileIfExists(safetyPath);
       }
-      _busy = false;
     }
   }
 

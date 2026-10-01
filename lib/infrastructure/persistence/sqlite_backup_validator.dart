@@ -8,6 +8,22 @@ final class SqliteBackupValidator implements BackupValidator {
 
   static const supportedSchemaVersion = 6;
 
+  // Colonnes du format partagé, inchangées depuis la création de chaque table.
+  // Les seuls noms de tables ne suffisent pas à reconnaître une copie lisible.
+  static const _readableColumns = {
+    'customers': 'id, civility, last_name, first_name, address, postal_code, '
+        'city, email, phone, archived_at, created_at, updated_at',
+    'pianos': 'id, customer_id, brand, model, serial_number, type, location, '
+        'notes, reminder_interval_months, reminders_enabled, archived_at, '
+        'created_at, updated_at',
+    'tunings': 'id, piano_id, tuning_date, notes, created_at, updated_at',
+    'reminders': 'id, piano_id, origin_tuning_id, due_date, status, '
+        'manually_rescheduled, cancellation_reason, sent_at, cancelled_at, '
+        'created_at, updated_at',
+    'activities': 'id, type, piano_id, tuning_id, reminder_id, previous_date, '
+        'new_date, occurred_at',
+  };
+
   @override
   void validate(String filePath) {
     Database? database;
@@ -25,6 +41,7 @@ final class SqliteBackupValidator implements BackupValidator {
         if (!tables.contains(table)) {
           throw const BackupFileInvalid();
         }
+        database.select('SELECT ${_readableColumns[table]} FROM $table LIMIT 1');
       }
       final check = database.select('PRAGMA quick_check');
       if (check.isEmpty || check.first.values.first.toString() != 'ok') {

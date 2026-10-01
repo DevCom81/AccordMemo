@@ -33,7 +33,7 @@ void main() {
       settingsBackupNewer,
     );
     expect(settingsRestoreMessage(const RestoreRolledBack()), settingsRestoreError);
-    expect(settingsRestoreMessage(const RestoreFailed()), settingsRestoreError);
+    expect(settingsRestoreMessage(const RestoreFailed()), settingsRestoreRecoveryError);
     expect(
       settingsRestoreMessage(Exception('WAL')),
       settingsRestoreError,
